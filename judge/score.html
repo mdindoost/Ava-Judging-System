@@ -424,27 +424,11 @@
   }
 
   async function checkAlreadyScored(presenterId) {
-    // Check offline queue first (fast, no network)
+    // Check offline queue only — server will reject duplicates if they slip through
     const queue = getQueue();
-    const inQueue = queue.some(
+    return queue.some(
       item => !item.synced && item.action === 'submitVote' && item.payload?.presenterID === presenterId
     );
-    if (inQueue) return true;
-
-    // Ask the backend (network-dependent)
-    try {
-      const result = await api.getAllVotes(getJudgeToken());
-      if (result.success && Array.isArray(result.data)) {
-        const judgeId = getJudgeId();
-        return result.data.some(
-          v => v.PresenterID === presenterId &&
-               (v.VoterID === judgeId || v.SessionToken === session.token)
-        );
-      }
-    } catch {
-      // If we can't check, allow the attempt — server will reject duplicate
-    }
-    return false;
   }
 
   /* ============================================================
