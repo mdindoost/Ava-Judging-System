@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Judges — Ava Judging System</title>
+  <link rel="stylesheet" href="../assets/css/variables.css" />
+  <link rel="stylesheet" href="../assets/css/base.css" />
+  <link rel="stylesheet" href="../assets/css/components.css" />
+  <link rel="stylesheet" href="../assets/css/admin.css" />
+</head>
+<body class="admin-body">
+<div class="admin-layout">
+  <nav class="admin-sidebar" id="admin-sidebar" aria-label="Admin navigation">
+    <div class="admin-sidebar__brand"><img src="../assets/img/logo.svg" alt="" width="28" height="28" /><span class="admin-sidebar__brand-name">Ava Admin</span></div>
+    <div class="admin-sidebar__scroll">
+      <ul class="admin-nav" role="list">
+        <li class="admin-nav__item"><a href="index.html"      class="admin-nav__link"><span class="admin-nav__icon">📊</span>Dashboard</a></li>
+        <li class="admin-nav__item"><a href="presenters.html" class="admin-nav__link"><span class="admin-nav__icon">🎓</span>Presenters</a></li>
+        <li class="admin-nav__item"><a href="judges.html"     class="admin-nav__link is-active"><span class="admin-nav__icon">⚖️</span>Judges</a></li>
+        <li class="admin-nav__item"><a href="tracks.html"     class="admin-nav__link"><span class="admin-nav__icon">🏷️</span>Tracks</a></li>
+        <li class="admin-nav__item"><a href="qr-manager.html" class="admin-nav__link"><span class="admin-nav__icon">📱</span>QR Codes</a></li>
+        <li class="admin-nav__item"><a href="checkin.html"    class="admin-nav__link"><span class="admin-nav__icon">✅</span>Check-In</a></li>
+        <li class="admin-nav__item"><a href="progress.html"   class="admin-nav__link"><span class="admin-nav__icon">📈</span>Progress</a></li>
+        <li class="admin-nav__item"><a href="results.html"    class="admin-nav__link"><span class="admin-nav__icon">🏆</span>Results</a></li>
+        <li class="admin-nav__item"><a href="reports.html"    class="admin-nav__link"><span class="admin-nav__icon">📋</span>Reports</a></li>
+        <li class="admin-nav__item"><a href="templates.html"  class="admin-nav__link"><span class="admin-nav__icon">📄</span>Templates</a></li>
+      </ul>
+    </div>
+    <div class="admin-sidebar__footer">
+      <div class="admin-sidebar__event-label">Event</div>
+      <div class="admin-sidebar__event-name" id="sidebar-event-name">Loading…</div>
+      <button type="button" class="btn btn-ghost btn-sm" id="sidebar-logout" style="width:100%;">Log Out</button>
+    </div>
+  </nav>
+  <div class="admin-sidebar-backdrop" id="sidebar-backdrop"></div>
+
+  <div class="admin-content-area">
+    <header class="admin-topbar">
+      <button class="admin-sidebar-toggle" id="sidebar-toggle" aria-label="Toggle navigation">☰</button>
+      <h1 class="admin-topbar__title">Manage Judges</h1>
+      <div class="admin-topbar__right">
+        <span class="admin-voting-badge" id="topbar-status-badge"></span>
+      </div>
+    </header>
+
+    <main class="admin-main" role="main">
+      <div class="admin-page-header">
+        <div>
+          <div class="admin-page-header__title">Judges</div>
+          <div class="admin-page-header__subtitle" id="judges-summary">Loading…</div>
+        </div>
+        <div class="admin-page-header__actions">
+          <button type="button" class="btn btn-secondary btn-sm" id="send-all-invites-btn">Send All Invites</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="send-reminders-btn">Send Reminders to Incomplete</button>
+          <button type="button" class="btn btn-primary" id="add-judge-btn">+ Add Judge</button>
+        </div>
+      </div>
+
+      <div class="admin-table-wrap">
+        <div class="admin-toolbar">
+          <div class="admin-toolbar__search">
+            <input type="search" id="search-input" class="form-input" placeholder="Search name or email…" aria-label="Search judges" />
+          </div>
+          <div class="admin-toolbar__filters">
+            <select id="filter-status" class="form-select" aria-label="Filter by status">
+              <option value="">All statuses</option>
+              <option value="not-invited">Not Invited</option>
+              <option value="invited">Invited</option>
+              <option value="logged-in">Logged In</option>
+            </select>
+          </div>
+        </div>
+
+        <table class="admin-table" id="judges-table" aria-label="Judges list">
+          <thead>
+            <tr>
+              <th class="sortable" data-sort="ID">ID <span class="sort-icon">↕</span></th>
+              <th class="sortable" data-sort="Name">Name <span class="sort-icon">↕</span></th>
+              <th class="sortable" data-sort="Email">Email <span class="sort-icon">↕</span></th>
+              <th>Invite Status</th>
+              <th class="sortable" data-sort="AssignedTrack">Assigned Track <span class="sort-icon">↕</span></th>
+              <th>Progress</th>
+              <th class="sortable" data-sort="LastActivity">Last Activity <span class="sort-icon">↕</span></th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="judges-tbody"><tr><td colspan="8" class="admin-table__empty">Loading…</td></tr></tbody>
+        </table>
+        <div class="admin-table-footer">
+          <span id="pagination-info"></span>
+          <div id="pagination-controls"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ADD / EDIT JUDGE MODAL -->
+<div class="modal-overlay" id="judge-modal" role="dialog" aria-modal="true" aria-labelledby="jmodal-title">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h2 class="modal-title" id="jmodal-title">Add Judge</h2>
+      <button type="button" class="modal-close" id="jmodal-close" aria-label="Close">×</button>
+    </div>
+    <form id="judge-form" novalidate>
+      <div class="modal-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4);">
+          <div class="form-group">
+            <label class="form-label" for="jf-name">Full Name *</label>
+            <input type="text" id="jf-name" name="Name" class="form-input" required maxlength="100" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="jf-email">Email * <span style="font-size:var(--text-xs);font-weight:400;">(for magic link)</span></label>
+            <input type="email" id="jf-email" name="Email" class="form-input" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="jf-track">Assigned Track</label>
+            <select id="jf-track" name="AssignedTrack" class="form-select">
+              <option value="">All Tracks</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" id="jmodal-cancel">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Judge</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ASSIGN PRESENTERS MODAL -->
+<div class="modal-overlay" id="assign-modal" role="dialog" aria-modal="true" aria-labelledby="assign-title">
+  <div class="modal-dialog" style="max-width:560px;">
+    <div class="modal-header">
+      <h2 class="modal-title" id="assign-title">Assign Presenters</h2>
+      <button type="button" class="modal-close" id="assign-close" aria-label="Close">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:var(--text-sm);color:var(--color-text-muted);margin-bottom:var(--space-4);">
+        Leave empty to assign all presenters (or all in their track). Select specific presenters to restrict this judge.
+      </p>
+      <input type="search" id="assign-search" class="form-input" placeholder="Search presenters…" style="margin-bottom:var(--space-3);" />
+      <div id="assign-list" style="max-height:300px;overflow-y:auto;border:1px solid var(--color-border);border-radius:var(--radius-md);"></div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-ghost" id="assign-cancel">Cancel</button>
+      <button type="button" class="btn btn-primary" id="assign-save">Save Assignment</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container" role="region" aria-label="Notifications" aria-live="polite"></div>
+
+<script type="module">
+  import { CONFIG } from '../assets/js/config.js';
+  import { STRINGS, interpolate } from '../assets/js/i18n.js';
+  import * as api from '../assets/js/api.js';
+  import { requireAdminAuth, clearAdminSession, getAdminToken } from '../assets/js/auth.js';
+  import { showToast, showError, showSuccess, confirmDialog, openModal, closeModal, paginate, renderPagination, sortBy, filterByQuery } from '../assets/js/ui.js';
+
+  const session = requireAdminAuth();
+  if (!session) throw new Error('Redirecting…');
+
+  document.getElementById('sidebar-toggle').addEventListener('click', () => {
+    document.getElementById('admin-sidebar').classList.toggle('is-open');
+    document.getElementById('sidebar-backdrop').classList.toggle('is-visible');
+  });
+  document.getElementById('sidebar-backdrop').addEventListener('click', () => {
+    document.getElementById('admin-sidebar').classList.remove('is-open');
+    document.getElementById('sidebar-backdrop').classList.remove('is-visible');
+  });
+  document.getElementById('sidebar-logout').addEventListener('click', () => { clearAdminSession(); location.href = 'login.html'; });
+
+  let _judges = [], _tracks = [], _presenters = [], _progress = {};
+  let _filtered = [], _sortKey = 'Name', _sortDir = 'asc', _page = 1;
+  let _editingId = null, _assigningJudgeId = null;
+  const PER_PAGE = CONFIG.PAGINATION.JUDGES_PER_PAGE;
+
+  loadData();
+
+  async function loadData() {
+    const [jRes, tRes, pRes, sRes, prRes] = await Promise.all([
+      api.getAllJudges(), api.getAllTracks(), api.getAllPresenters(),
+      api.getSettings(), api.getAllJudgeProgress(),
+    ]);
+    if (jRes.success)  _judges     = jRes.data || [];
+    if (tRes.success)  _tracks     = tRes.data || [];
+    if (pRes.success)  _presenters = pRes.data || [];
+    if (sRes.success) {
+      document.getElementById('sidebar-event-name').textContent = sRes.data?.eventName || '';
+      updateStatusBadge(sRes.data?.votingStatus);
+    }
+    if (prRes.success) {
+      (_progress = {});
+      (prRes.data || []).forEach(p => { _progress[p.judgeId] = p; });
+    }
+    populateTracks();
+    updateSummary();
+    applyFilter();
+  }
+
+  function updateStatusBadge(status) {
+    const el = document.getElementById('topbar-status-badge');
+    const s = status || 'paused';
+    el.className = `admin-voting-badge admin-voting-badge--${s}`;
+    el.innerHTML = `<span class="admin-voting-badge__dot"></span>${s.charAt(0).toUpperCase() + s.slice(1)}`;
+  }
+
+  function populateTracks() {
+    const sel = document.getElementById('jf-track');
+    const first = sel.options[0]; sel.innerHTML = ''; sel.appendChild(first.cloneNode(true));
+    _tracks.forEach(t => {
+      const opt = document.createElement('option'); opt.value = t.Name || t.TrackID; opt.textContent = t.Name; sel.appendChild(opt);
+    });
+  }
+
+  function updateSummary() {
+    const loggedIn = _judges.filter(j => j.TokenUsed === 'TRUE' || j.TokenUsed === true).length;
+    document.getElementById('judges-summary').textContent = `${_judges.length} judges · ${loggedIn} have logged in`;
+  }
+
+  function applyFilter() {
+    const q = document.getElementById('search-input').value;
+    const s = document.getElementById('filter-status').value;
+    let list = filterByQuery(_judges, q, ['Name','Email','ID']);
+    if (s === 'not-invited') list = list.filter(j => !j.Token);
+    if (s === 'invited')     list = list.filter(j => j.Token && !(j.TokenUsed === 'TRUE' || j.TokenUsed === true));
+    if (s === 'logged-in')   list = list.filter(j => j.TokenUsed === 'TRUE' || j.TokenUsed === true);
+    _filtered = sortBy(list, _sortKey, _sortDir);
+    _page = 1;
+    render();
+  }
+
+  function render() {
+    const { items, totalPages, total, from, to, page } = paginate(_filtered, _page, PER_PAGE);
+    _page = page;
+    const tbody = document.getElementById('judges-tbody');
+
+    if (!items.length) {
+      tbody.innerHTML = `<tr><td colspan="8" class="admin-table__empty">No judges found.</td></tr>`;
+    } else {
+      tbody.innerHTML = items.map(j => {
+        const tokenUsed = j.TokenUsed === 'TRUE' || j.TokenUsed === true;
+        const hasToken  = Boolean(j.Token);
+        const statusBadge = tokenUsed
+          ? `<span class="badge badge-success">Logged In</span>`
+          : hasToken
+            ? `<span class="badge badge-warning">Invited</span>`
+            : `<span class="badge badge-neutral">Not Invited</span>`;
+        const prog = _progress[j.ID];
+        const progHtml = prog
+          ? `<div style="display:flex;align-items:center;gap:var(--space-2);">
+              <div style="flex:1;height:6px;background:var(--color-border);border-radius:3px;overflow:hidden;">
+                <div style="height:100%;width:${Math.round(prog.completionPct||0)}%;background:var(--color-primary);border-radius:3px;"></div>
+              </div>
+              <span style="font-size:var(--text-xs);font-family:var(--font-mono);color:var(--color-primary);">${prog.scored||0}/${prog.total||0}</span>
+             </div>`
+          : '—';
+        const lastActivity = j.LastActivity ? _relTime(j.LastActivity) : '—';
+        return `<tr>
+          <td><span style="font-family:var(--font-mono);font-size:var(--text-xs);color:var(--color-primary);font-weight:600;">${_esc(j.ID)}</span></td>
+          <td style="font-weight:var(--font-weight-semibold);">${_esc(j.Name)}</td>
+          <td style="color:var(--color-text-muted);">${_esc(j.Email)}</td>
+          <td>${statusBadge}</td>
+          <td style="color:var(--color-text-muted);">${_esc(j.AssignedTrack || 'All Tracks')}</td>
+          <td style="min-width:120px;">${progHtml}</td>
+          <td style="color:var(--color-text-muted);font-size:var(--text-xs);">${lastActivity}</td>
+          <td>
+            <div class="admin-table__actions" style="flex-wrap:wrap;">
+              <button type="button" class="btn btn-ghost btn-sm" data-edit="${_esc(j.ID)}" aria-label="Edit">Edit</button>
+              ${!hasToken
+                ? `<button type="button" class="btn btn-secondary btn-sm" data-invite="${_esc(j.ID)}" data-name="${_esc(j.Name)}">Send Invite</button>`
+                : `<button type="button" class="btn btn-ghost btn-sm" data-reinvite="${_esc(j.ID)}" data-name="${_esc(j.Name)}">Resend</button>`}
+              <button type="button" class="btn btn-ghost btn-sm" data-remind="${_esc(j.ID)}" data-name="${_esc(j.Name)}">Remind</button>
+              <button type="button" class="btn btn-ghost btn-sm" data-assign="${_esc(j.ID)}" data-name="${_esc(j.Name)}">Assign</button>
+              <button type="button" class="btn btn-danger btn-sm" data-delete="${_esc(j.ID)}" data-name="${_esc(j.Name)}">Delete</button>
+            </div>
+          </td>
+        </tr>`;
+      }).join('');
+
+      tbody.querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', () => openEditModal(b.dataset.edit)));
+      tbody.querySelectorAll('[data-invite]').forEach(b => b.addEventListener('click', () => sendInvite(b.dataset.invite, b.dataset.name)));
+      tbody.querySelectorAll('[data-reinvite]').forEach(b => b.addEventListener('click', () => resendInvite(b.dataset.reinvite, b.dataset.name)));
+      tbody.querySelectorAll('[data-remind]').forEach(b => b.addEventListener('click', () => sendReminder(b.dataset.remind, b.dataset.name)));
+      tbody.querySelectorAll('[data-assign]').forEach(b => b.addEventListener('click', () => openAssignModal(b.dataset.assign, b.dataset.name)));
+      tbody.querySelectorAll('[data-delete]').forEach(b => b.addEventListener('click', () => deleteJudge(b.dataset.delete, b.dataset.name)));
+    }
+
+    document.getElementById('pagination-info').textContent = total > 0 ? `Showing ${from}–${to} of ${total}` : '';
+    renderPagination('pagination-controls', { page: _page, totalPages, total, from, to }, p => { _page = p; render(); });
+  }
+
+  document.querySelectorAll('#judges-table th.sortable').forEach(th => {
+    th.addEventListener('click', () => {
+      if (_sortKey === th.dataset.sort) _sortDir = _sortDir === 'asc' ? 'desc' : 'asc';
+      else { _sortKey = th.dataset.sort; _sortDir = 'asc'; }
+      applyFilter();
+    });
+  });
+
+  document.getElementById('search-input').addEventListener('input', applyFilter);
+  document.getElementById('filter-status').addEventListener('change', applyFilter);
+
+  /* ─── Add/Edit ─── */
+  document.getElementById('add-judge-btn').addEventListener('click', () => {
+    _editingId = null;
+    document.getElementById('jmodal-title').textContent = 'Add Judge';
+    document.getElementById('judge-form').reset();
+    openModal('judge-modal');
+  });
+  document.getElementById('jmodal-close').addEventListener('click', () => closeModal('judge-modal'));
+  document.getElementById('jmodal-cancel').addEventListener('click', () => closeModal('judge-modal'));
+
+  function openEditModal(id) {
+    const j = _judges.find(x => x.ID === id);
+    if (!j) return;
+    _editingId = id;
+    document.getElementById('jmodal-title').textContent = 'Edit Judge';
+    document.getElementById('jf-name').value  = j.Name || '';
+    document.getElementById('jf-email').value = j.Email || '';
+    document.getElementById('jf-track').value = j.AssignedTrack || '';
+    openModal('judge-modal');
+  }
+
+  document.getElementById('judge-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name  = document.getElementById('jf-name').value.trim();
+    const email = document.getElementById('jf-email').value.trim();
+    if (!name || !email) { showError('Name and email are required.'); return; }
+    const data = { Name: name, Email: email, AssignedTrack: document.getElementById('jf-track').value };
+    const token = getAdminToken();
+    let r;
+    if (_editingId) {
+      r = await api.editJudge(_editingId, data, token);
+      if (r.success) showSuccess(STRINGS.success.judgeUpdated);
+    } else {
+      r = await api.addJudge(data, token);
+      if (r.success) showSuccess(STRINGS.success.judgeAdded);
+    }
+    if (!r.success) { showError(r.error || STRINGS.errors.generic); return; }
+    closeModal('judge-modal');
+    await loadData();
+  });
+
+  /* ─── Invite / Resend / Remind ─── */
+  async function sendInvite(id, name) {
+    const r = await api.sendInvitation(id, getAdminToken());
+    if (r.success) { showSuccess(interpolate(STRINGS.success.judgeInvited, { email: name })); loadData(); }
+    else showError(r.error || STRINGS.errors.generic);
+  }
+
+  async function resendInvite(id, name) {
+    const r = await api.resendInvitation(id, getAdminToken());
+    if (r.success) { showSuccess(interpolate(STRINGS.success.inviteResent, { name })); }
+    else showError(r.error || STRINGS.errors.generic);
+  }
+
+  async function sendReminder(id, name) {
+    const r = await api.sendReminder(id, getAdminToken());
+    if (r.success) { showSuccess(interpolate(STRINGS.success.reminderSent, { name })); }
+    else showError(r.error || STRINGS.errors.generic);
+  }
+
+  document.getElementById('send-all-invites-btn').addEventListener('click', async () => {
+    const uninvited = _judges.filter(j => !j.Token).map(j => j.ID);
+    if (!uninvited.length) { showToast('All judges already have invitations.', 'info'); return; }
+    const confirmed = await confirmDialog({ title: 'Send Invitations', message: interpolate(STRINGS.confirm.sendBulkInvites, { count: uninvited.length }), confirmText: 'Send', confirmType: 'primary' });
+    if (!confirmed) return;
+    const r = await api.sendBulkInvitations(uninvited, getAdminToken());
+    if (r.success) { showSuccess(interpolate(STRINGS.success.bulkInvitesSent, { count: uninvited.length })); loadData(); }
+    else showError(r.error || STRINGS.errors.generic);
+  });
+
+  document.getElementById('send-reminders-btn').addEventListener('click', async () => {
+    const confirmed = await confirmDialog({ title: 'Send Reminders', message: interpolate(STRINGS.confirm.sendBulkReminders, { count: '?' }), confirmText: 'Send', confirmType: 'primary' });
+    if (!confirmed) return;
+    const r = await api.sendBulkReminders(getAdminToken());
+    if (r.success) showToast('Reminders sent.', 'success');
+    else showError(r.error || STRINGS.errors.generic);
+  });
+
+  /* ─── Delete ─── */
+  async function deleteJudge(id, name) {
+    const confirmed = await confirmDialog({ title: 'Remove Judge', message: interpolate(STRINGS.confirm.deleteJudge, { name }), confirmText: 'Remove', confirmType: 'danger' });
+    if (!confirmed) return;
+    const r = await api.deleteJudge(id, getAdminToken());
+    if (r.success) { showToast(STRINGS.success.judgeDeleted, 'success'); await loadData(); }
+    else showError(r.error || STRINGS.errors.generic);
+  }
+
+  /* ─── Assign Presenters Modal ─── */
+  document.getElementById('assign-close').addEventListener('click', () => closeModal('assign-modal'));
+  document.getElementById('assign-cancel').addEventListener('click', () => closeModal('assign-modal'));
+
+  function openAssignModal(judgeId, judgeName) {
+    _assigningJudgeId = judgeId;
+    document.getElementById('assign-title').textContent = interpolate(STRINGS.headings.assignPresenters, { name: judgeName });
+    const j = _judges.find(x => x.ID === judgeId);
+    let assignedIds = [];
+    try { assignedIds = JSON.parse(j?.AssignedPresenters || '[]'); } catch { assignedIds = []; }
+
+    renderAssignList(_presenters, assignedIds);
+    document.getElementById('assign-search').value = '';
+    document.getElementById('assign-search').addEventListener('input', function() {
+      const q = this.value.toLowerCase();
+      const filtered = q ? _presenters.filter(p => (p.Name + p.ID).toLowerCase().includes(q)) : _presenters;
+      const current = getSelectedAssignIds();
+      renderAssignList(filtered, current);
+    });
+
+    openModal('assign-modal');
+  }
+
+  function renderAssignList(presenters, selectedIds) {
+    const container = document.getElementById('assign-list');
+    container.innerHTML = presenters.map(p => `
+      <label style="display:flex;align-items:center;gap:var(--space-3);padding:var(--space-3) var(--space-4);cursor:pointer;border-bottom:1px solid var(--color-border);">
+        <input type="checkbox" data-pid="${_esc(p.ID)}" ${selectedIds.includes(p.ID) ? 'checked' : ''} />
+        <div>
+          <div style="font-weight:600;">${_esc(p.Name)}</div>
+          <div style="font-size:var(--text-xs);color:var(--color-text-muted);">${_esc(p.ID)} · ${_esc(p.Department || '')}</div>
+        </div>
+      </label>
+    `).join('');
+  }
+
+  function getSelectedAssignIds() {
+    return Array.from(document.querySelectorAll('#assign-list input[type="checkbox"]:checked')).map(cb => cb.dataset.pid);
+  }
+
+  document.getElementById('assign-save').addEventListener('click', async () => {
+    if (!_assigningJudgeId) return;
+    const ids = getSelectedAssignIds();
+    const r = await api.editJudge(_assigningJudgeId, { AssignedPresenters: JSON.stringify(ids) }, getAdminToken());
+    if (r.success) {
+      const j = _judges.find(x => x.ID === _assigningJudgeId);
+      if (j) j.AssignedPresenters = JSON.stringify(ids);
+      showSuccess(interpolate(STRINGS.success.presenterAssigned, { count: ids.length || 'all', name: j?.Name || '' }));
+      closeModal('assign-modal');
+    } else showError(r.error || STRINGS.errors.generic);
+  });
+
+  function _relTime(ts) {
+    if (!ts) return '—';
+    const diff = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
+    return Math.floor(diff/86400) + 'd ago';
+  }
+
+  function _esc(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+</script>
+</body>
+</html>

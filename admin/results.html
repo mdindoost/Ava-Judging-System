@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Results — Ava Judging System</title>
+  <link rel="stylesheet" href="../assets/css/variables.css" />
+  <link rel="stylesheet" href="../assets/css/base.css" />
+  <link rel="stylesheet" href="../assets/css/components.css" />
+  <link rel="stylesheet" href="../assets/css/admin.css" />
+</head>
+<body class="admin-body">
+<div class="admin-layout">
+  <nav class="admin-sidebar" id="admin-sidebar" aria-label="Admin navigation">
+    <div class="admin-sidebar__brand"><img src="../assets/img/logo.svg" alt="" width="28" height="28" /><span class="admin-sidebar__brand-name">Ava Admin</span></div>
+    <div class="admin-sidebar__scroll">
+      <ul class="admin-nav" role="list">
+        <li class="admin-nav__item"><a href="index.html"      class="admin-nav__link"><span class="admin-nav__icon">📊</span>Dashboard</a></li>
+        <li class="admin-nav__item"><a href="presenters.html" class="admin-nav__link"><span class="admin-nav__icon">🎓</span>Presenters</a></li>
+        <li class="admin-nav__item"><a href="judges.html"     class="admin-nav__link"><span class="admin-nav__icon">⚖️</span>Judges</a></li>
+        <li class="admin-nav__item"><a href="tracks.html"     class="admin-nav__link"><span class="admin-nav__icon">🏷️</span>Tracks</a></li>
+        <li class="admin-nav__item"><a href="qr-manager.html" class="admin-nav__link"><span class="admin-nav__icon">📱</span>QR Codes</a></li>
+        <li class="admin-nav__item"><a href="checkin.html"    class="admin-nav__link"><span class="admin-nav__icon">✅</span>Check-In</a></li>
+        <li class="admin-nav__item"><a href="progress.html"   class="admin-nav__link"><span class="admin-nav__icon">📈</span>Progress</a></li>
+        <li class="admin-nav__item"><a href="results.html"    class="admin-nav__link is-active"><span class="admin-nav__icon">🏆</span>Results</a></li>
+        <li class="admin-nav__item"><a href="reports.html"    class="admin-nav__link"><span class="admin-nav__icon">📋</span>Reports</a></li>
+        <li class="admin-nav__item"><a href="templates.html"  class="admin-nav__link"><span class="admin-nav__icon">📄</span>Templates</a></li>
+      </ul>
+    </div>
+    <div class="admin-sidebar__footer">
+      <div class="admin-sidebar__event-label">Event</div>
+      <div class="admin-sidebar__event-name" id="sidebar-event-name">Loading…</div>
+      <button type="button" class="btn btn-ghost btn-sm" id="sidebar-logout" style="width:100%;">Log Out</button>
+    </div>
+  </nav>
+  <div class="admin-sidebar-backdrop" id="sidebar-backdrop"></div>
+
+  <div class="admin-content-area">
+    <header class="admin-topbar">
+      <button class="admin-sidebar-toggle" id="sidebar-toggle" aria-label="Toggle navigation">☰</button>
+      <h1 class="admin-topbar__title">Live Results</h1>
+      <div class="admin-topbar__right">
+        <span style="font-size:var(--text-xs);color:var(--color-text-muted);" id="last-refreshed">—</span>
+        <span class="admin-voting-badge" id="topbar-status-badge"></span>
+      </div>
+    </header>
+
+    <main class="admin-main" role="main">
+
+      <!-- Voting control strip -->
+      <div class="voting-control-strip" role="group" aria-label="Voting controls">
+        <div>
+          <div class="voting-control-strip__label">Voting Status</div>
+          <div id="voting-status-text" style="font-size:var(--text-base);font-weight:700;color:var(--color-text);margin-top:var(--space-1);">—</div>
+        </div>
+        <div class="voting-control-strip__status"></div>
+        <div class="voting-control-strip__buttons">
+          <button type="button" class="btn btn-voting-open"  id="btn-open-voting"  style="min-width:130px;">▶ Open Voting</button>
+          <button type="button" class="btn btn-voting-pause" id="btn-pause-voting" style="min-width:130px;">⏸ Pause Voting</button>
+          <button type="button" class="btn btn-voting-close" id="btn-close-voting" style="min-width:130px;">⏹ Close Voting</button>
+        </div>
+      </div>
+
+      <!-- Results controls -->
+      <div style="display:flex;gap:var(--space-3);align-items:center;margin-bottom:var(--space-5);flex-wrap:wrap;">
+        <select id="filter-track" class="form-select" style="max-width:200px;" aria-label="Filter by track">
+          <option value="">All Tracks</option>
+        </select>
+        <button type="button" class="btn btn-secondary btn-sm" id="refresh-results-btn">Refresh Results</button>
+        <div style="display:flex;align-items:center;gap:var(--space-2);">
+          <label style="font-size:var(--text-sm);color:var(--color-text-muted);" for="auto-refresh">Auto-refresh</label>
+          <input type="checkbox" id="auto-refresh" checked />
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" id="export-results-btn">Export CSV</button>
+      </div>
+
+      <!-- Top 3 winners podium -->
+      <div class="winners-podium" id="winners-podium" hidden aria-label="Top 3 winners"></div>
+
+      <!-- Score distribution chart -->
+      <div class="chart-card" style="margin-bottom:var(--space-6);">
+        <div class="chart-card__title">Score Distribution</div>
+        <div class="chart-card__canvas-wrap" style="height:200px;">
+          <canvas id="distribution-chart" aria-label="Score distribution histogram"></canvas>
+        </div>
+      </div>
+
+      <!-- Full leaderboard table -->
+      <div class="admin-table-wrap">
+        <table class="admin-table" id="results-table" aria-label="Results leaderboard">
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Presenter</th>
+              <th>Department</th>
+              <th>Track</th>
+              <th>Judge Avg</th>
+              <th>Audience Avg</th>
+              <th>Final Score</th>
+              <th>Votes</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="results-tbody"><tr><td colspan="9" class="admin-table__empty">Click "Refresh Results" to compute rankings.</td></tr></tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div id="toast-container" role="region" aria-label="Notifications" aria-live="polite"></div>
+
+<script type="module">
+  import { CONFIG } from '../assets/js/config.js';
+  import { STRINGS } from '../assets/js/i18n.js';
+  import * as api from '../assets/js/api.js';
+  import { requireAdminAuth, clearAdminSession, getAdminToken } from '../assets/js/auth.js';
+  import { showToast, showError, showSuccess, confirmDialog } from '../assets/js/ui.js';
+  import { renderHistogram } from '../assets/js/charts.js';
+  import { buildHistogram } from '../assets/js/scoring.js';
+
+  const session = requireAdminAuth();
+  if (!session) throw new Error('Redirecting…');
+
+  document.getElementById('sidebar-toggle').addEventListener('click', () => { document.getElementById('admin-sidebar').classList.toggle('is-open'); document.getElementById('sidebar-backdrop').classList.toggle('is-visible'); });
+  document.getElementById('sidebar-backdrop').addEventListener('click', () => { document.getElementById('admin-sidebar').classList.remove('is-open'); document.getElementById('sidebar-backdrop').classList.remove('is-visible'); });
+  document.getElementById('sidebar-logout').addEventListener('click', () => { clearAdminSession(); location.href = 'login.html'; });
+
+  let _results = [], _settings = {}, _autoInterval = null;
+
+  loadData();
+
+  document.getElementById('refresh-results-btn').addEventListener('click', refreshResults);
+  document.getElementById('filter-track').addEventListener('change', renderTable);
+  document.getElementById('auto-refresh').addEventListener('change', function() { clearInterval(_autoInterval); if (this.checked) startAutoRefresh(); });
+  document.getElementById('export-results-btn').addEventListener('click', exportCSV);
+
+  /* Voting controls */
+  document.getElementById('btn-open-voting').addEventListener('click',  () => setVotingStatus('open'));
+  document.getElementById('btn-pause-voting').addEventListener('click', () => setVotingStatus('paused'));
+  document.getElementById('btn-close-voting').addEventListener('click', () => setVotingStatus('closed'));
+
+  startAutoRefresh();
+
+  function startAutoRefresh() {
+    _autoInterval = setInterval(loadData, CONFIG.POLL.LEADERBOARD);
+  }
+
+  async function loadData() {
+    const [lRes, sRes, tRes] = await Promise.all([api.getLeaderboard(), api.getSettings(), api.getAllTracks()]);
+    if (lRes.success) _results = lRes.data || [];
+    if (sRes.success) {
+      _settings = sRes.data || {};
+      document.getElementById('sidebar-event-name').textContent = _settings.eventName || '';
+      updateVotingUI(_settings.votingStatus);
+      // Populate track filter
+      const sel = document.getElementById('filter-track');
+      const first = sel.options[0]; sel.innerHTML = ''; sel.appendChild(first.cloneNode(true));
+      (tRes.data || []).forEach(t => { const o = document.createElement('option'); o.value = t.Name; o.textContent = t.Name; sel.appendChild(o); });
+    }
+    renderTable();
+    renderDistributionChart();
+    document.getElementById('last-refreshed').textContent = 'Updated ' + new Date().toLocaleTimeString();
+  }
+
+  async function refreshResults() {
+    const btn = document.getElementById('refresh-results-btn');
+    btn.disabled = true; btn.textContent = 'Recalculating…';
+    const r = await api.refreshResults();
+    if (r.success) { showSuccess(STRINGS.success.resultsRefreshed); await loadData(); }
+    else showError(r.error || STRINGS.errors.generic);
+    btn.disabled = false; btn.textContent = 'Refresh Results';
+  }
+
+  function updateVotingUI(status) {
+    const s = status || 'paused';
+    const badge = document.getElementById('topbar-status-badge');
+    badge.className = `admin-voting-badge admin-voting-badge--${s}`;
+    badge.innerHTML = `<span class="admin-voting-badge__dot"></span>${s.charAt(0).toUpperCase()+s.slice(1)}`;
+
+    const labels = { open: 'Voting is OPEN', paused: 'Voting is PAUSED', closed: 'Voting is CLOSED' };
+    document.getElementById('voting-status-text').textContent = labels[s] || s;
+    document.getElementById('voting-status-text').style.color = s === 'open' ? 'var(--color-success)' : s === 'paused' ? 'var(--color-warning)' : 'var(--color-danger)';
+
+    document.getElementById('btn-open-voting').disabled  = (s === 'open');
+    document.getElementById('btn-pause-voting').disabled = (s === 'paused');
+    document.getElementById('btn-close-voting').disabled = (s === 'closed');
+  }
+
+  async function setVotingStatus(newStatus) {
+    const confirmMessages = {
+      closed: STRINGS.confirm.closeVoting,
+      paused: STRINGS.confirm.pauseVoting,
+    };
+    if (confirmMessages[newStatus]) {
+      const ok = await confirmDialog({ title: 'Confirm', message: confirmMessages[newStatus], confirmType: newStatus === 'closed' ? 'danger' : 'primary' });
+      if (!ok) return;
+    }
+
+    const r = await api.updateSettings({ votingStatus: newStatus }, getAdminToken());
+    if (r.success) {
+      const msgs = { open: STRINGS.success.votingOpened, paused: STRINGS.success.votingPaused, closed: STRINGS.success.votingClosed };
+      showSuccess(msgs[newStatus]);
+      _settings.votingStatus = newStatus;
+      updateVotingUI(newStatus);
+    } else showError(r.error || STRINGS.errors.generic);
+  }
+
+  function renderTable() {
+    const trackFilter = document.getElementById('filter-track').value;
+    let list = trackFilter ? _results.filter(r => r.Track === trackFilter) : _results;
+
+    // Winners podium
+    const podium = document.getElementById('winners-podium');
+    const top3 = list.slice(0, 3);
+    if (top3.length > 0) {
+      podium.hidden = false;
+      const medals = ['🥇','🥈','🥉'];
+      const classes = ['1st','2nd','3rd'];
+      podium.innerHTML = top3.map((p, i) => `
+        <div class="winner-card winner-card--${classes[i]}">
+          <div class="winner-card__medal" aria-label="${['First','Second','Third'][i]} place" aria-hidden="true">${medals[i]}</div>
+          <div class="winner-card__name">${_esc(p.Name)}</div>
+          <div class="winner-card__dept">${_esc(p.Department || '')}</div>
+          <div class="winner-card__score">${_fmt(p.FinalScore)}</div>
+        </div>
+      `).join('');
+    } else {
+      podium.hidden = true;
+    }
+
+    const tbody = document.getElementById('results-tbody');
+    if (list.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="9" class="admin-table__empty">No results yet. Add scores and click "Refresh Results".</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = list.map((p, i) => {
+      const rank = p.OverallRank || (i + 1);
+      const rankEl = rank <= 3
+        ? `<div class="rank-medal rank-medal--${rank}">` + (rank === 1 ? '🥇' : rank === 2 ? '🥈' : '🥉') + `</div>`
+        : `<div class="rank-medal rank-medal--other">${rank}</div>`;
+      const rubricBreakdown = p.RubricBreakdown ? (() => { try { return JSON.parse(p.RubricBreakdown); } catch { return null; } })() : null;
+      return `<tr>
+        <td>${rankEl}</td>
+        <td style="font-weight:600;">${_esc(p.Name)}</td>
+        <td style="color:var(--color-text-muted);">${_esc(p.Department || '')}</td>
+        <td>${p.Track ? `<span class="track-tag" style="background:var(--color-primary-50);color:var(--color-primary);">${_esc(p.Track)}</span>` : '—'}</td>
+        <td style="font-family:var(--font-mono);font-weight:700;color:var(--color-primary);">${_fmt(p.JudgeAvg)}</td>
+        <td style="font-family:var(--font-mono);color:var(--color-text-muted);">${_fmt(p.AudienceAvg)}</td>
+        <td style="font-family:var(--font-mono);font-weight:700;font-size:var(--text-md);color:var(--color-primary);">${_fmt(p.FinalScore)}</td>
+        <td style="color:var(--color-text-muted);">${(p.JudgeVoteCount||0) + (p.AudienceVoteCount||0)}</td>
+        <td>${rubricBreakdown ? `<button type="button" class="btn btn-ghost btn-sm" data-expand="${_esc(p.PresenterID)}" aria-label="Expand details">▼</button>` : ''}</td>
+      </tr>
+      ${rubricBreakdown ? `<tr class="detail-row" id="detail-${_esc(p.PresenterID)}" hidden>
+        <td colspan="9">
+          <div class="detail-row__inner">
+            ${Object.entries(rubricBreakdown).map(([catId, stats]) => `
+              <div>
+                <div class="detail-rubric-item__label">${_esc(catId)}</div>
+                <div class="detail-rubric-item__value">${_fmt(stats.avg)} <span style="font-size:var(--text-xs);color:var(--color-text-muted);">avg · ±${_fmt(stats.stdDev)} SD</span></div>
+              </div>
+            `).join('')}
+          </div>
+        </td>
+      </tr>` : ''}`;
+    }).join('');
+
+    // Expand/collapse row
+    tbody.querySelectorAll('[data-expand]').forEach(btn => btn.addEventListener('click', () => {
+      const row = document.getElementById(`detail-${btn.dataset.expand}`);
+      if (!row) return;
+      const hidden = row.hidden;
+      row.hidden = !hidden;
+      btn.textContent = hidden ? '▲' : '▼';
+    }));
+  }
+
+  function renderDistributionChart() {
+    if (_results.length === 0) return;
+    const scores = _results.map(r => parseFloat(r.FinalScore) || 0);
+    const maxScore = parseFloat(_settings.maxJudgeScore) || 25;
+    const bins = buildHistogram(scores, maxScore);
+    renderHistogram('distribution-chart', { labels: bins.map(b => b.label), counts: bins.map(b => b.count) })
+      .catch(() => {});
+  }
+
+  function exportCSV() {
+    if (_results.length === 0) { showToast(STRINGS.errors.noDataToExport, 'warning'); return; }
+    const headers = ['OverallRank','PresenterID','Name','Department','Track','JudgeAvg','AudienceAvg','FinalScore','JudgeVoteCount','AudienceVoteCount'];
+    const rows = _results.map(r => headers.map(h => String(r[h] ?? '')));
+    const csv = [headers, ...rows].map(r => r.map(v => `"${v.replace(/"/g,'""')}"`).join(',')).join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'results.csv'; a.click();
+    showToast(STRINGS.success.exportReady, 'success');
+  }
+
+  function _fmt(val) { return (val === null || val === undefined || isNaN(val)) ? '—' : parseFloat(val).toFixed(2); }
+  function _esc(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+</script>
+</body>
+</html>

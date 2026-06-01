@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Score a Presenter — Ava Judging System" />
+  <meta name="theme-color" content="#1a365d" />
+  <title>Score Presenter — Ava Judging System</title>
+
+  <link rel="stylesheet" href="../assets/css/variables.css" />
+  <link rel="stylesheet" href="../assets/css/base.css" />
+  <link rel="stylesheet" href="../assets/css/components.css" />
+  <link rel="stylesheet" href="../assets/css/judge.css" />
+</head>
+<body>
+
+<div class="judge-layout">
+
+  <!-- HEADER -->
+  <header class="judge-header" role="banner">
+    <div class="judge-header__brand">
+      <a href="dashboard.html" class="btn-judge-logout" aria-label="Back to dashboard" style="border:none;color:var(--color-primary-200);font-size:var(--text-xl);line-height:1;padding:var(--space-2);" >‹</a>
+      <div>
+        <div class="judge-header__title">Score Presenter</div>
+        <div class="judge-header__event" id="header-judge-name"></div>
+      </div>
+    </div>
+    <div class="judge-header__actions">
+      <button
+        type="button"
+        class="btn-judge-logout"
+        id="logout-btn"
+        aria-label="Log out"
+      >
+        Log Out
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT -->
+  <main class="judge-main" id="main-content" role="main">
+
+    <!-- ── STATE: LOADING ── -->
+    <div id="state-loading" aria-busy="true" aria-live="polite" style="text-align:center;padding:var(--space-10) 0;">
+      <div class="spinner" role="status" aria-label="Loading presenter information"></div>
+      <p style="margin-top:var(--space-4);color:var(--color-text-muted);">Loading presenter…</p>
+    </div>
+
+    <!-- ── STATE: ID ENTRY (no presenter in URL) ── -->
+    <div id="state-id-entry" hidden>
+      <div class="score-id-entry">
+        <h2 class="score-id-entry__title">Enter Presenter ID</h2>
+        <p style="font-size:var(--text-sm);color:var(--color-text-muted);margin-bottom:var(--space-4);">
+          Scan the QR code on the presenter's poster, or type their ID (e.g. P042).
+        </p>
+        <div class="score-id-row">
+          <input
+            type="text"
+            id="manual-id-input"
+            class="form-input"
+            placeholder="P001"
+            aria-label="Presenter ID"
+            maxlength="10"
+            autocomplete="off"
+            spellcheck="false"
+            autocapitalize="characters"
+          />
+          <button type="button" class="btn btn-primary" id="load-presenter-btn">
+            Load
+          </button>
+        </div>
+        <div id="manual-id-error" class="form-error" role="alert" style="display:none;margin-top:var(--space-2);"></div>
+      </div>
+      <div style="text-align:center;margin-top:var(--space-4);">
+        <a href="dashboard.html" class="btn btn-ghost btn-sm">← Back to Dashboard</a>
+      </div>
+    </div>
+
+    <!-- ── STATE: ERROR ── -->
+    <div id="state-error" hidden>
+      <div class="judge-alert judge-alert--warning" role="alert">
+        <span class="judge-alert__icon" aria-hidden="true">⚠</span>
+        <div>
+          <strong>Could not load presenter.</strong>
+          <span id="state-error-msg"></span>
+        </div>
+      </div>
+      <div style="display:flex;gap:var(--space-3);margin-top:var(--space-4);">
+        <button type="button" class="btn btn-secondary" id="retry-load-btn">Retry</button>
+        <a href="dashboard.html" class="btn btn-ghost">← Dashboard</a>
+      </div>
+    </div>
+
+    <!-- ── STATE: ALREADY SCORED ── -->
+    <div id="state-already-scored" hidden>
+      <div class="score-success">
+        <div class="score-success__checkmark" aria-hidden="true">✓</div>
+        <h2 class="score-success__heading">Already Scored</h2>
+        <p class="score-success__presenter" id="already-scored-name"></p>
+        <p class="score-success__summary">
+          You have already submitted scores for this presenter. Each presenter can only be scored once per judge.
+        </p>
+        <div class="score-success__actions">
+          <a href="dashboard.html" class="btn btn-primary">Back to Dashboard</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── STATE: VOTING CLOSED / PAUSED ── -->
+    <div id="state-voting-locked" hidden>
+      <div class="judge-alert" id="voting-locked-banner" role="alert">
+        <span class="judge-alert__icon" aria-hidden="true">🔒</span>
+        <div id="voting-locked-msg"></div>
+      </div>
+      <div style="margin-top:var(--space-4);">
+        <a href="dashboard.html" class="btn btn-secondary">← Back to Dashboard</a>
+      </div>
+    </div>
+
+    <!-- ── STATE: SCORING FORM ── -->
+    <div id="state-form" hidden>
+
+      <!-- Presenter info card -->
+      <div class="score-presenter-card" aria-label="Presenter information">
+        <span class="score-presenter-poster" id="presenter-poster" aria-label="Poster number"></span>
+        <h1 class="score-presenter-name" id="presenter-name"></h1>
+        <p class="score-presenter-dept" id="presenter-dept"></p>
+        <span class="score-presenter-track" id="presenter-track" hidden></span>
+      </div>
+
+      <!-- Voting status warning -->
+      <div id="voting-status-warning" class="judge-alert judge-alert--warning" role="alert" hidden>
+        <span class="judge-alert__icon" aria-hidden="true">⚠</span>
+        <span id="voting-status-warning-msg"></span>
+      </div>
+
+      <!-- Offline banner (injected by offline.js) -->
+
+      <!-- Scoring form -->
+      <form id="score-form" novalidate aria-label="Scoring form" autocomplete="off">
+
+        <!-- MULTI-RUBRIC SECTION -->
+        <div id="rubric-fields" class="score-form-card">
+          <h2 class="score-form-card__title" id="rubric-form-title">Evaluation Rubric</h2>
+          <div id="rubric-items">
+            <!-- Rubric items injected by JS -->
+          </div>
+        </div>
+
+        <!-- SINGLE SCORE SECTION -->
+        <div id="single-field" class="score-form-card" hidden>
+          <h2 class="score-form-card__title">Score</h2>
+          <div class="score-rubric-item">
+            <div class="score-rubric-header">
+              <span class="score-rubric-name">Overall Score</span>
+              <span class="score-rubric-max" id="single-max-label">/ 25</span>
+            </div>
+            <div class="score-rubric-input-row">
+              <input
+                type="number"
+                id="single-score-input"
+                class="score-rubric-input"
+                min="0"
+                step="0.01"
+                placeholder="0"
+                aria-label="Score"
+                aria-describedby="single-score-error"
+                inputmode="decimal"
+              />
+              <div class="score-rubric-indicator">
+                <div class="score-rubric-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                  <div class="score-rubric-bar-fill" id="single-bar-fill" style="width:0%"></div>
+                </div>
+                <div class="score-rubric-fraction" id="single-bar-label">0 / 25</div>
+              </div>
+            </div>
+            <div class="score-rubric-error" id="single-score-error" role="alert"></div>
+            <div id="single-comment-wrap" class="score-rubric-comment" hidden>
+              <label class="form-label" for="single-comment">Comments (optional)</label>
+              <textarea
+                id="single-comment"
+                class="form-textarea"
+                placeholder="Add your notes here…"
+                aria-label="Comments"
+                maxlength="1000"
+                rows="3"
+              ></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Score Summary Panel -->
+        <div class="score-summary-panel" id="score-summary" aria-live="polite" aria-label="Score summary">
+          <div class="score-summary-panel__title">Score Summary</div>
+          <div id="summary-rows">
+            <!-- Injected by JS -->
+          </div>
+          <div class="score-summary-total">
+            <span class="score-summary-total__label">Estimated Total</span>
+            <span class="score-summary-total__value" id="summary-total">—</span>
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          class="btn btn-primary score-submit-btn"
+          id="submit-btn"
+          disabled
+        >
+          Submit Scores
+        </button>
+      </form>
+    </div>
+
+    <!-- ── STATE: SUCCESS ── -->
+    <div id="state-success" hidden>
+
+      <!-- Offline saved notice (shown instead of green success when offline) -->
+      <div id="offline-saved-notice" class="score-offline-saved" hidden role="status">
+        <span class="score-offline-saved__icon" aria-hidden="true">💾</span>
+        <div class="score-offline-saved__text">
+          <div class="score-offline-saved__title">Saved Offline</div>
+          Your scores have been saved to this device and will sync automatically when you reconnect.
+        </div>
+      </div>
+
+      <div class="score-success">
+        <div class="score-success__checkmark" aria-hidden="true" id="success-icon">✓</div>
+        <h2 class="score-success__heading" id="success-heading">Scores Submitted!</h2>
+        <p class="score-success__presenter" id="success-presenter-name"></p>
+        <p class="score-success__summary" id="success-summary"></p>
+        <div class="score-success__actions">
+          <button type="button" class="btn btn-primary" id="score-next-btn">Score Next Presenter</button>
+          <a href="dashboard.html" class="btn btn-secondary">Back to Dashboard</a>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <footer class="judge-footer">
+    <p>Powered by <strong>Ava Judging System</strong></p>
+  </footer>
+</div><!-- /judge-layout -->
+
+<div id="toast-container" role="region" aria-label="Notifications" aria-live="polite"></div>
+
+<script type="module">
+  import { CONFIG } from '../assets/js/config.js';
+  import { STRINGS, interpolate } from '../assets/js/i18n.js';
+  import * as api from '../assets/js/api.js';
+  import { requireJudgeAuth, clearJudgeSession, getJudgeToken, getJudgeId } from '../assets/js/auth.js';
+  import { showToast, showError, showSuccess } from '../assets/js/ui.js';
+  import { initOfflineDetection, registerSyncRequestFn, isOffline, getQueue } from '../assets/js/offline.js';
+  import { requestWithOfflineSupport, request } from '../assets/js/api.js';
+  import {
+    validateScore,
+    validateSingleScore,
+    validateScoreSet,
+    calculateWeightedAverage,
+    calculateNormalizedScore,
+    formatScore,
+    scoreToPercent,
+  } from '../assets/js/scoring.js';
+
+  /* ============================================================
+     INIT
+     ============================================================ */
+
+  const session = requireJudgeAuth();
+  if (!session) throw new Error('Redirecting…');
+
+  registerSyncRequestFn(request);
+
+  document.getElementById('header-judge-name').textContent = session.judgeName;
+  document.getElementById('logout-btn').addEventListener('click', () => {
+    clearJudgeSession();
+    window.location.href = 'login.html';
+  });
+
+  let _presenter = null;
+  let _settings = {};
+  let _rubricCategories = [];
+  let _rubricMode = 'single';
+  let _allowDecimals = true;
+  let _maxJudgeScore = CONFIG.SCORING.MAX_JUDGE_SCORE;
+  let _submittedScores = null;
+
+  initOfflineDetection(async (result) => {
+    if (result.synced > 0) {
+      showToast(
+        interpolate(STRINGS.success.syncComplete, { count: result.synced }),
+        'success',
+      );
+    }
+  });
+
+  const params = new URLSearchParams(window.location.search);
+  const urlPresenterId = params.get('presenter');
+
+  if (urlPresenterId) {
+    loadPresenter(urlPresenterId);
+  } else {
+    showState('id-entry');
+    setupManualEntry();
+  }
+
+  /* ============================================================
+     MANUAL ID ENTRY
+     ============================================================ */
+
+  function setupManualEntry() {
+    const input = document.getElementById('manual-id-input');
+    const btn = document.getElementById('load-presenter-btn');
+    const err = document.getElementById('manual-id-error');
+
+    function doLoad() {
+      err.style.display = 'none';
+      const id = input.value.trim().toUpperCase();
+      if (!id) {
+        err.textContent = 'Please enter a presenter ID.';
+        err.style.display = 'block';
+        input.focus();
+        return;
+      }
+      // Update URL so browser back-button works
+      history.replaceState(null, '', `score.html?presenter=${encodeURIComponent(id)}`);
+      loadPresenter(id);
+    }
+
+    btn.addEventListener('click', doLoad);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); doLoad(); }
+    });
+  }
+
+  /* ============================================================
+     LOAD PRESENTER + SETTINGS
+     ============================================================ */
+
+  async function loadPresenter(presenterId) {
+    showState('loading');
+
+    try {
+      const [presResult, settingsResult] = await Promise.all([
+        api.getAllPresenters(),
+        api.getSettings(),
+      ]);
+
+      if (!settingsResult.success) {
+        showState('error', settingsResult.error || STRINGS.errors.generic);
+        return;
+      }
+
+      _settings = settingsResult.data || {};
+      _rubricMode = _settings.rubricMode || CONFIG.RUBRIC_MODE.SINGLE;
+      _allowDecimals = _settings.allowDecimalScores === 'true' || _settings.allowDecimalScores === true;
+      _maxJudgeScore = parseFloat(_settings.maxJudgeScore) || CONFIG.SCORING.MAX_JUDGE_SCORE;
+
+      try {
+        _rubricCategories = typeof _settings.rubricCategories === 'string'
+          ? JSON.parse(_settings.rubricCategories)
+          : (_settings.rubricCategories || []);
+      } catch {
+        _rubricCategories = [];
+      }
+
+      // Check voting status
+      const votingStatus = _settings.votingStatus || 'open';
+      if (votingStatus !== 'open') {
+        const banner = document.getElementById('voting-locked-banner');
+        const msg = document.getElementById('voting-locked-msg');
+        if (votingStatus === 'paused') {
+          banner.className = 'judge-alert judge-alert--warning';
+          msg.textContent = 'Voting is currently paused. Please wait for the administrator to resume before submitting scores.';
+        } else {
+          banner.className = 'judge-alert judge-alert--info';
+          msg.textContent = 'Voting has closed for this event. Scores can no longer be submitted.';
+        }
+        showState('voting-locked');
+        return;
+      }
+
+      if (!presResult.success) {
+        showState('error', presResult.error || STRINGS.errors.generic);
+        return;
+      }
+
+      const presenters = presResult.data || [];
+      _presenter = presenters.find(p => p.ID === presenterId || p.ID === presenterId.toUpperCase());
+
+      if (!_presenter) {
+        showState('error', STRINGS.errors.presenterNotFound);
+        return;
+      }
+
+      if (_presenter.Active === 'FALSE' || _presenter.Active === false) {
+        showState('error', STRINGS.errors.presenterInactive);
+        return;
+      }
+
+      // Track restriction check (client-side pre-flight)
+      const assignedTrack = session.assignedTrack || null;
+      if (assignedTrack && _presenter.Track && _presenter.Track !== assignedTrack) {
+        showState('error', STRINGS.errors.trackRestricted);
+        return;
+      }
+
+      // Check if already scored (in offline queue or we can ask the backend)
+      const alreadyScored = await checkAlreadyScored(presenterId);
+      if (alreadyScored) {
+        document.getElementById('already-scored-name').textContent = _presenter.Name;
+        showState('already-scored');
+        return;
+      }
+
+      renderScoringForm();
+      showState('form');
+
+    } catch (err) {
+      if (CONFIG.DEBUG) console.error('[Score]', err);
+      showState('error', STRINGS.errors.generic);
+    }
+  }
+
+  async function checkAlreadyScored(presenterId) {
+    // Check offline queue first (fast, no network)
+    const queue = getQueue();
+    const inQueue = queue.some(
+      item => !item.synced && item.action === 'submitVote' && item.payload?.presenterID === presenterId
+    );
+    if (inQueue) return true;
+
+    // Ask the backend (network-dependent)
+    try {
+      const result = await api.getAllVotes(getJudgeToken());
+      if (result.success && Array.isArray(result.data)) {
+        const judgeId = getJudgeId();
+        return result.data.some(
+          v => v.PresenterID === presenterId &&
+               (v.VoterID === judgeId || v.SessionToken === session.token)
+        );
+      }
+    } catch {
+      // If we can't check, allow the attempt — server will reject duplicate
+    }
+    return false;
+  }
+
+  /* ============================================================
+     RENDER SCORING FORM
+     ============================================================ */
+
+  function renderScoringForm() {
+    // Presenter info
+    document.getElementById('presenter-name').textContent = _presenter.Name;
+    document.getElementById('presenter-dept').textContent = _presenter.Department || '';
+
+    const posterEl = document.getElementById('presenter-poster');
+    if (_presenter.PosterNumber) {
+      posterEl.textContent = 'Poster ' + _presenter.PosterNumber;
+    } else {
+      posterEl.textContent = 'ID: ' + _presenter.ID;
+    }
+
+    const trackEl = document.getElementById('presenter-track');
+    if (_presenter.Track) {
+      trackEl.textContent = _presenter.Track;
+      trackEl.hidden = false;
+    } else {
+      trackEl.hidden = true;
+    }
+
+    if (_rubricMode === CONFIG.RUBRIC_MODE.MULTI && _rubricCategories.length > 0) {
+      renderMultiRubricForm();
+    } else {
+      renderSingleScoreForm();
+    }
+  }
+
+  function renderMultiRubricForm() {
+    document.getElementById('rubric-fields').hidden = false;
+    document.getElementById('single-field').hidden = true;
+
+    document.getElementById('rubric-form-title').textContent =
+      `Evaluation Rubric (${_rubricCategories.length} categories)`;
+
+    const container = document.getElementById('rubric-items');
+    container.innerHTML = '';
+
+    for (const cat of _rubricCategories) {
+      container.appendChild(buildRubricItem(cat));
+    }
+
+    renderSummary();
+    updateSubmitState();
+  }
+
+  function buildRubricItem(cat) {
+    const div = document.createElement('div');
+    div.className = 'score-rubric-item';
+    div.dataset.catId = cat.id;
+
+    const stepAttr = _allowDecimals ? '0.01' : '1';
+
+    div.innerHTML = `
+      <div class="score-rubric-header">
+        <span class="score-rubric-name">${escHTML(cat.name)}</span>
+        <span class="score-rubric-max">/ ${cat.maxScore}</span>
+      </div>
+      ${cat.description ? `<p class="score-rubric-description">${escHTML(cat.description)}</p>` : ''}
+      <div class="score-rubric-input-row">
+        <input
+          type="number"
+          class="score-rubric-input"
+          data-cat-id="${escHTML(cat.id)}"
+          data-max="${cat.maxScore}"
+          min="0"
+          max="${cat.maxScore}"
+          step="${stepAttr}"
+          placeholder="0"
+          aria-label="${escHTML(cat.name)} score (0 to ${cat.maxScore})"
+          aria-describedby="rubric-error-${escHTML(cat.id)}"
+          inputmode="decimal"
+        />
+        <div class="score-rubric-indicator">
+          <div class="score-rubric-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+            <div class="score-rubric-bar-fill" id="bar-fill-${escHTML(cat.id)}" style="width:0%"></div>
+          </div>
+          <div class="score-rubric-fraction" id="bar-label-${escHTML(cat.id)}">— / ${cat.maxScore}</div>
+        </div>
+      </div>
+      <div class="score-rubric-error" id="rubric-error-${escHTML(cat.id)}" role="alert"></div>
+      ${cat.allowComments ? `
+      <div class="score-rubric-comment">
+        <label class="form-label" for="comment-${escHTML(cat.id)}" style="font-size:var(--text-sm);">
+          Comments (optional)
+        </label>
+        <textarea
+          id="comment-${escHTML(cat.id)}"
+          class="form-textarea"
+          data-cat-id="${escHTML(cat.id)}"
+          placeholder="Add your notes for ${escHTML(cat.name)}…"
+          aria-label="Comments for ${escHTML(cat.name)}"
+          maxlength="500"
+          rows="2"
+        ></textarea>
+      </div>` : ''}
+    `;
+
+    // Attach input listener
+    const input = div.querySelector('input[type="number"]');
+    input.addEventListener('input', () => onRubricInput(input, cat));
+    input.addEventListener('blur', () => onRubricBlur(input, cat));
+
+    return div;
+  }
+
+  function onRubricInput(input, cat) {
+    const val = input.value;
+    const pct = val !== '' ? scoreToPercent(parseFloat(val), cat.maxScore) : 0;
+    const fill = document.getElementById(`bar-fill-${cat.id}`);
+    const label = document.getElementById(`bar-label-${cat.id}`);
+
+    if (fill) fill.style.width = pct + '%';
+    if (label) label.textContent = val !== '' ? `${val} / ${cat.maxScore}` : `— / ${cat.maxScore}`;
+
+    // Clear error on input
+    const errEl = document.getElementById(`rubric-error-${cat.id}`);
+    if (errEl) { errEl.textContent = ''; errEl.className = 'score-rubric-error'; }
+    input.classList.remove('is-invalid');
+
+    renderSummary();
+    updateSubmitState();
+  }
+
+  function onRubricBlur(input, cat) {
+    const val = input.value;
+    if (val === '') return;
+    const result = validateScore(val, 0, cat.maxScore, _allowDecimals ? CONFIG.SCORING.DECIMAL_PLACES : 0);
+    if (!result.valid) {
+      const errEl = document.getElementById(`rubric-error-${cat.id}`);
+      if (errEl) { errEl.textContent = result.error; errEl.className = 'score-rubric-error is-visible'; }
+      input.classList.add('is-invalid');
+    }
+  }
+
+  function renderSingleScoreForm() {
+    document.getElementById('rubric-fields').hidden = true;
+    document.getElementById('single-field').hidden = false;
+
+    const maxLabel = document.getElementById('single-max-label');
+    maxLabel.textContent = `/ ${_maxJudgeScore}`;
+
+    const input = document.getElementById('single-score-input');
+    input.max = _maxJudgeScore;
+    input.step = _allowDecimals ? '0.01' : '1';
+    input.setAttribute('aria-label', `Score (0 to ${_maxJudgeScore})`);
+
+    // Comment field
+    const commentWrap = document.getElementById('single-comment-wrap');
+    commentWrap.hidden = false; // Always show comment for single mode
+
+    input.addEventListener('input', () => {
+      const val = input.value;
+      const pct = val !== '' ? scoreToPercent(parseFloat(val), _maxJudgeScore) : 0;
+      document.getElementById('single-bar-fill').style.width = pct + '%';
+      document.getElementById('single-bar-label').textContent =
+        val !== '' ? `${val} / ${_maxJudgeScore}` : `— / ${_maxJudgeScore}`;
+      document.getElementById('single-score-error').textContent = '';
+      document.getElementById('single-score-error').className = 'score-rubric-error';
+      input.classList.remove('is-invalid');
+      renderSingleSummary();
+      updateSubmitState();
+    });
+
+    input.addEventListener('blur', () => {
+      const val = input.value;
+      if (val === '') return;
+      const result = validateSingleScore(val, _maxJudgeScore, _allowDecimals);
+      if (!result.valid) {
+        document.getElementById('single-score-error').textContent = result.error;
+        document.getElementById('single-score-error').className = 'score-rubric-error is-visible';
+        input.classList.add('is-invalid');
+      }
+    });
+
+    renderSingleSummary();
+    updateSubmitState();
+  }
+
+  function renderSummary() {
+    if (_rubricMode !== CONFIG.RUBRIC_MODE.MULTI) return renderSingleSummary();
+
+    const rowsEl = document.getElementById('summary-rows');
+    const totalEl = document.getElementById('summary-total');
+
+    const scores = collectMultiScores();
+    let html = '';
+    for (const cat of _rubricCategories) {
+      const entry = scores.find(s => s.category === cat.id);
+      const val = (entry && entry.score !== '' && entry.score !== null)
+        ? `${entry.score} / ${cat.maxScore}`
+        : '—';
+      html += `<div class="score-summary-row">
+        <span class="score-summary-row__cat">${escHTML(cat.name)}</span>
+        <span class="score-summary-row__val">${escHTML(val)}</span>
+      </div>`;
+    }
+    rowsEl.innerHTML = html;
+
+    // Calculate weighted total
+    const validScores = scores.filter(s => s.score !== '' && s.score !== null && !isNaN(parseFloat(s.score)));
+    if (validScores.length === _rubricCategories.length) {
+      const normalized = calculateNormalizedScore(validScores, _rubricCategories, _maxJudgeScore);
+      totalEl.textContent = formatScore(normalized, 1) + ' / ' + _maxJudgeScore;
+    } else {
+      totalEl.textContent = '—';
+    }
+  }
+
+  function renderSingleSummary() {
+    const rowsEl = document.getElementById('summary-rows');
+    const totalEl = document.getElementById('summary-total');
+    const input = document.getElementById('single-score-input');
+    const val = input.value;
+
+    rowsEl.innerHTML = `<div class="score-summary-row">
+      <span class="score-summary-row__cat">Overall Score</span>
+      <span class="score-summary-row__val">${val !== '' ? `${val} / ${_maxJudgeScore}` : '—'}</span>
+    </div>`;
+
+    totalEl.textContent = val !== '' ? `${val} / ${_maxJudgeScore}` : '—';
+  }
+
+  function updateSubmitState() {
+    const btn = document.getElementById('submit-btn');
+    let allFilled = false;
+
+    if (_rubricMode === CONFIG.RUBRIC_MODE.MULTI) {
+      const scores = collectMultiScores();
+      allFilled = scores.every(s => s.score !== '' && s.score !== null);
+      // Also check all are valid numbers
+      if (allFilled) {
+        allFilled = scores.every(s => !isNaN(parseFloat(s.score)));
+      }
+    } else {
+      const val = document.getElementById('single-score-input').value;
+      allFilled = val !== '' && !isNaN(parseFloat(val));
+    }
+
+    btn.disabled = !allFilled;
+  }
+
+  /* ============================================================
+     COLLECT SCORES
+     ============================================================ */
+
+  function collectMultiScores() {
+    const scores = [];
+    const items = document.querySelectorAll('#rubric-items .score-rubric-item');
+    for (const item of items) {
+      const catId = item.dataset.catId;
+      const input = item.querySelector('input[type="number"]');
+      const commentEl = item.querySelector(`textarea[data-cat-id="${catId}"]`);
+      scores.push({
+        category: catId,
+        score: input ? input.value : '',
+        comment: commentEl ? commentEl.value.trim() : '',
+      });
+    }
+    return scores;
+  }
+
+  /* ============================================================
+     FORM SUBMIT
+     ============================================================ */
+
+  document.getElementById('score-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    await handleSubmit();
+  });
+
+  async function handleSubmit() {
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true;
+    btn.textContent = 'Submitting…';
+
+    let scores;
+    let validationResult;
+
+    if (_rubricMode === CONFIG.RUBRIC_MODE.MULTI) {
+      scores = collectMultiScores();
+      validationResult = validateScoreSet(scores, _rubricCategories, _allowDecimals);
+
+      if (!validationResult.valid) {
+        // Show per-field errors
+        for (const [catId, errMsg] of Object.entries(validationResult.errors)) {
+          const errEl = document.getElementById(`rubric-error-${catId}`);
+          const input = document.querySelector(`input[data-cat-id="${catId}"]`);
+          if (errEl) { errEl.textContent = errMsg; errEl.className = 'score-rubric-error is-visible'; }
+          if (input) input.classList.add('is-invalid');
+        }
+        // Focus first invalid input
+        const firstInvalid = document.querySelector('.score-rubric-input.is-invalid');
+        if (firstInvalid) firstInvalid.focus();
+        btn.disabled = false;
+        btn.textContent = 'Submit Scores';
+        return;
+      }
+    } else {
+      const input = document.getElementById('single-score-input');
+      const comment = document.getElementById('single-comment').value.trim();
+      validationResult = validateSingleScore(input.value, _maxJudgeScore, _allowDecimals);
+
+      if (!validationResult.valid) {
+        document.getElementById('single-score-error').textContent = validationResult.error;
+        document.getElementById('single-score-error').className = 'score-rubric-error is-visible';
+        input.classList.add('is-invalid');
+        input.focus();
+        btn.disabled = false;
+        btn.textContent = 'Submit Scores';
+        return;
+      }
+
+      scores = [{
+        category: 'total',
+        score: parseFloat(input.value),
+        comment,
+      }];
+    }
+
+    // Build payload
+    const payload = {
+      presenterID:  _presenter.ID,
+      voterType:    CONFIG.VOTER_TYPE.JUDGE,
+      voterID:      session.judgeId,
+      voterName:    session.judgeName,
+      scores:       scores.map(s => ({ ...s, score: parseFloat(s.score) })),
+      sessionToken: session.token,
+    };
+
+    // Submit (with offline fallback)
+    let result;
+    try {
+      result = await requestWithOfflineSupport(payload);
+    } catch (err) {
+      result = { success: false, error: STRINGS.errors.generic, offline: false };
+    }
+
+    if (!result.success && !result.offline) {
+      // Server rejected
+      showError(result.error || STRINGS.errors.generic);
+      btn.disabled = false;
+      btn.textContent = 'Submit Scores';
+      return;
+    }
+
+    // Success (online or offline)
+    _submittedScores = scores;
+    localStorage.setItem('ava_last_scored_time', Date.now().toString());
+
+    showSuccessState(result.offline || false);
+  }
+
+  function showSuccessState(wasOffline) {
+    const offlineNotice = document.getElementById('offline-saved-notice');
+    const heading = document.getElementById('success-heading');
+    const icon = document.getElementById('success-icon');
+    const presenterName = document.getElementById('success-presenter-name');
+    const summary = document.getElementById('success-summary');
+
+    presenterName.textContent = _presenter.Name;
+
+    if (wasOffline) {
+      offlineNotice.hidden = false;
+      heading.textContent = 'Scores Saved Offline';
+      heading.style.color = 'var(--color-warning)';
+      icon.textContent = '💾';
+      icon.style.background = 'var(--color-warning-light)';
+    } else {
+      offlineNotice.hidden = true;
+      heading.textContent = 'Scores Submitted!';
+      heading.style.color = '';
+      icon.textContent = '✓';
+      icon.style.background = '';
+    }
+
+    // Summary text
+    if (_rubricMode === CONFIG.RUBRIC_MODE.MULTI && _submittedScores) {
+      const catNames = _submittedScores.map(s => {
+        const cat = _rubricCategories.find(c => c.id === s.category);
+        return cat ? `${cat.name}: ${s.score}/${cat.maxScore}` : '';
+      }).filter(Boolean);
+      summary.textContent = catNames.join(' · ');
+    } else if (_submittedScores && _submittedScores[0]) {
+      summary.textContent = `Score: ${_submittedScores[0].score} / ${_maxJudgeScore}`;
+    }
+
+    showState('success');
+
+    document.getElementById('score-next-btn').addEventListener('click', () => {
+      window.location.href = 'score.html';
+    }, { once: true });
+  }
+
+  /* ============================================================
+     STATE MANAGEMENT
+     ============================================================ */
+
+  const ALL_STATES = ['loading', 'id-entry', 'error', 'already-scored', 'voting-locked', 'form', 'success'];
+
+  function showState(name, errorMsg) {
+    for (const s of ALL_STATES) {
+      const el = document.getElementById(`state-${s}`);
+      if (el) el.hidden = (s !== name);
+    }
+    if (name === 'error' && errorMsg) {
+      document.getElementById('state-error-msg').textContent = ' ' + errorMsg;
+    }
+    if (name === 'error') {
+      document.getElementById('retry-load-btn').onclick = () => {
+        const p = new URLSearchParams(window.location.search).get('presenter');
+        if (p) loadPresenter(p);
+        else showState('id-entry');
+      };
+    }
+  }
+
+  /* ============================================================
+     HELPERS
+     ============================================================ */
+
+  function escHTML(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+</script>
+</body>
+</html>

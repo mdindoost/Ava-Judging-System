@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Check-In — Ava Judging System</title>
+  <link rel="stylesheet" href="../assets/css/variables.css" />
+  <link rel="stylesheet" href="../assets/css/base.css" />
+  <link rel="stylesheet" href="../assets/css/components.css" />
+  <link rel="stylesheet" href="../assets/css/admin.css" />
+</head>
+<body class="admin-body">
+<div class="admin-layout">
+  <nav class="admin-sidebar" id="admin-sidebar" aria-label="Admin navigation">
+    <div class="admin-sidebar__brand"><img src="../assets/img/logo.svg" alt="" width="28" height="28" /><span class="admin-sidebar__brand-name">Ava Admin</span></div>
+    <div class="admin-sidebar__scroll">
+      <ul class="admin-nav" role="list">
+        <li class="admin-nav__item"><a href="index.html"      class="admin-nav__link"><span class="admin-nav__icon">📊</span>Dashboard</a></li>
+        <li class="admin-nav__item"><a href="presenters.html" class="admin-nav__link"><span class="admin-nav__icon">🎓</span>Presenters</a></li>
+        <li class="admin-nav__item"><a href="judges.html"     class="admin-nav__link"><span class="admin-nav__icon">⚖️</span>Judges</a></li>
+        <li class="admin-nav__item"><a href="tracks.html"     class="admin-nav__link"><span class="admin-nav__icon">🏷️</span>Tracks</a></li>
+        <li class="admin-nav__item"><a href="qr-manager.html" class="admin-nav__link"><span class="admin-nav__icon">📱</span>QR Codes</a></li>
+        <li class="admin-nav__item"><a href="checkin.html"    class="admin-nav__link is-active"><span class="admin-nav__icon">✅</span>Check-In</a></li>
+        <li class="admin-nav__item"><a href="progress.html"   class="admin-nav__link"><span class="admin-nav__icon">📈</span>Progress</a></li>
+        <li class="admin-nav__item"><a href="results.html"    class="admin-nav__link"><span class="admin-nav__icon">🏆</span>Results</a></li>
+        <li class="admin-nav__item"><a href="reports.html"    class="admin-nav__link"><span class="admin-nav__icon">📋</span>Reports</a></li>
+        <li class="admin-nav__item"><a href="templates.html"  class="admin-nav__link"><span class="admin-nav__icon">📄</span>Templates</a></li>
+      </ul>
+    </div>
+    <div class="admin-sidebar__footer">
+      <div class="admin-sidebar__event-label">Event</div>
+      <div class="admin-sidebar__event-name" id="sidebar-event-name">Loading…</div>
+      <button type="button" class="btn btn-ghost btn-sm" id="sidebar-logout" style="width:100%;">Log Out</button>
+    </div>
+  </nav>
+  <div class="admin-sidebar-backdrop" id="sidebar-backdrop"></div>
+
+  <div class="admin-content-area">
+    <header class="admin-topbar">
+      <button class="admin-sidebar-toggle" id="sidebar-toggle" aria-label="Toggle navigation">☰</button>
+      <h1 class="admin-topbar__title">Presenter Check-In</h1>
+      <div class="admin-topbar__right"><span class="admin-voting-badge" id="topbar-status-badge"></span></div>
+    </header>
+
+    <main class="admin-main" role="main">
+
+      <!-- Stats strip -->
+      <div class="checkin-stats-strip" aria-label="Check-in statistics">
+        <div class="checkin-stat">
+          <div class="checkin-stat__value" id="stat-checkedin">—</div>
+          <div class="checkin-stat__label">Checked In</div>
+        </div>
+        <div class="checkin-stat" style="flex:3;">
+          <div class="checkin-progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" id="checkin-progress-bar">
+            <div class="checkin-progress-fill" id="checkin-progress-fill" style="width:0%;"></div>
+          </div>
+          <div style="font-size:var(--text-xs);color:var(--color-text-muted);margin-top:var(--space-1);" id="stat-pct">0% of total</div>
+        </div>
+        <div class="checkin-stat">
+          <div class="checkin-stat__value" id="stat-total">—</div>
+          <div class="checkin-stat__label">Total</div>
+        </div>
+      </div>
+
+      <!-- Search + results -->
+      <div class="checkin-search-wrap" role="search">
+        <span class="checkin-search-icon" aria-hidden="true">🔍</span>
+        <input
+          type="search"
+          id="checkin-search"
+          class="checkin-search-input"
+          placeholder="Search by name, ID, or poster number…"
+          aria-label="Search presenters for check-in"
+          autocomplete="off"
+          spellcheck="false"
+        />
+      </div>
+
+      <!-- Search results (quick check-in) -->
+      <div id="search-results" aria-live="polite"></div>
+
+      <!-- Full presenter table -->
+      <div class="admin-card" style="margin-top:var(--space-6);">
+        <div class="admin-card__header">
+          <span class="admin-card__title">All Presenters</span>
+          <div class="admin-card__actions">
+            <button type="button" class="btn btn-ghost btn-sm" id="refresh-btn" aria-label="Refresh">↻ Refresh</button>
+            <select id="table-filter" class="form-select" aria-label="Filter">
+              <option value="all">All</option>
+              <option value="checked-in">Checked In</option>
+              <option value="not-checked-in">Not Checked In</option>
+            </select>
+          </div>
+        </div>
+        <div class="admin-card__body--no-pad">
+          <table class="admin-table" id="checkin-table" aria-label="Presenter check-in list">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Poster #</th>
+                <th>Department</th>
+                <th>Status</th>
+                <th>Check-In Time</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="checkin-tbody"><tr><td colspan="7" class="admin-table__empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Check-in history log -->
+      <div class="admin-card" id="history-section" style="margin-top:var(--space-5);">
+        <div class="admin-card__header">
+          <span class="admin-card__title">Recent Check-Ins</span>
+        </div>
+        <div class="admin-card__body">
+          <div id="history-list" style="max-height:200px;overflow-y:auto;">
+            <p style="color:var(--color-text-muted);font-size:var(--text-sm);">No check-ins recorded yet.</p>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div id="toast-container" role="region" aria-label="Notifications" aria-live="polite"></div>
+
+<script type="module">
+  import { CONFIG } from '../assets/js/config.js';
+  import { STRINGS, interpolate } from '../assets/js/i18n.js';
+  import * as api from '../assets/js/api.js';
+  import { requireAdminAuth, clearAdminSession, getAdminToken } from '../assets/js/auth.js';
+  import { showToast, showError, showSuccess } from '../assets/js/ui.js';
+
+  const session = requireAdminAuth();
+  if (!session) throw new Error('Redirecting…');
+
+  document.getElementById('sidebar-toggle').addEventListener('click', () => { document.getElementById('admin-sidebar').classList.toggle('is-open'); document.getElementById('sidebar-backdrop').classList.toggle('is-visible'); });
+  document.getElementById('sidebar-backdrop').addEventListener('click', () => { document.getElementById('admin-sidebar').classList.remove('is-open'); document.getElementById('sidebar-backdrop').classList.remove('is-visible'); });
+  document.getElementById('sidebar-logout').addEventListener('click', () => { clearAdminSession(); location.href = 'login.html'; });
+  document.getElementById('refresh-btn').addEventListener('click', loadData);
+
+  let _presenters = [];
+  const _history  = []; // local check-in log
+
+  loadData();
+
+  async function loadData() {
+    const [pRes, sRes] = await Promise.all([api.getAllPresenters(), api.getSettings()]);
+    if (pRes.success) _presenters = pRes.data || [];
+    if (sRes.success) {
+      document.getElementById('sidebar-event-name').textContent = sRes.data?.eventName || '';
+      const s = sRes.data?.votingStatus || 'paused';
+      const el = document.getElementById('topbar-status-badge');
+      el.className = `admin-voting-badge admin-voting-badge--${s}`;
+      el.innerHTML = `<span class="admin-voting-badge__dot"></span>${s.charAt(0).toUpperCase()+s.slice(1)}`;
+    }
+    updateStats();
+    renderTable();
+  }
+
+  function updateStats() {
+    const checkedIn = _presenters.filter(p => p.CheckedIn === 'TRUE' || p.CheckedIn === true).length;
+    const total = _presenters.length;
+    const pct = total > 0 ? Math.round((checkedIn / total) * 100) : 0;
+    document.getElementById('stat-checkedin').textContent = checkedIn;
+    document.getElementById('stat-total').textContent = total;
+    document.getElementById('stat-pct').textContent = `${pct}% of total`;
+    document.getElementById('checkin-progress-fill').style.width = pct + '%';
+    document.getElementById('checkin-progress-bar').setAttribute('aria-valuenow', pct);
+  }
+
+  /* ─── Search ─── */
+  let _searchTimeout;
+  document.getElementById('checkin-search').addEventListener('input', function() {
+    clearTimeout(_searchTimeout);
+    _searchTimeout = setTimeout(() => renderSearchResults(this.value.trim()), 150);
+  });
+
+  function renderSearchResults(query) {
+    const container = document.getElementById('search-results');
+    if (!query) { container.innerHTML = ''; return; }
+
+    const q = query.toLowerCase();
+    const matches = _presenters.filter(p =>
+      (p.Name || '').toLowerCase().includes(q) ||
+      (p.ID || '').toLowerCase().includes(q) ||
+      (p.PosterNumber || '').toLowerCase().includes(q)
+    ).slice(0, 8);
+
+    if (matches.length === 0) {
+      container.innerHTML = `<div style="padding:var(--space-4);color:var(--color-text-muted);font-size:var(--text-sm);">No presenters found for "${_esc(query)}"</div>`;
+      return;
+    }
+
+    container.innerHTML = matches.map(p => {
+      const isIn = p.CheckedIn === 'TRUE' || p.CheckedIn === true;
+      return `<div class="checkin-result">
+        ${p.PosterNumber ? `<div style="font-family:var(--font-mono);font-size:var(--text-sm);font-weight:700;color:var(--color-primary);background:var(--color-primary-50);padding:var(--space-2) var(--space-3);border-radius:var(--radius-sm);flex-shrink:0;">${_esc(p.PosterNumber)}</div>` : ''}
+        <div class="checkin-result__info">
+          <div class="checkin-result__name">${_esc(p.Name)}</div>
+          <div class="checkin-result__meta">${_esc(p.ID)} · ${_esc(p.Department || '')}</div>
+        </div>
+        <span class="checkin-result__status ${isIn ? 'checkin-result__status--in' : 'checkin-result__status--out'}">${isIn ? '✓ Checked In' : 'Not Yet'}</span>
+        <div style="display:flex;gap:var(--space-2);">
+          ${!isIn ? `<button type="button" class="btn btn-primary btn-sm" data-checkin="${_esc(p.ID)}" data-name="${_esc(p.Name)}">Check In</button>` : ''}
+          ${isIn ? `<button type="button" class="btn btn-ghost btn-sm" data-absent="${_esc(p.ID)}" data-name="${_esc(p.Name)}">Undo Check-In</button>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+
+    container.querySelectorAll('[data-checkin]').forEach(btn => btn.addEventListener('click', () => checkInPresenter(btn.dataset.checkin, btn.dataset.name)));
+    container.querySelectorAll('[data-absent]').forEach(btn  => btn.addEventListener('click', () => markAbsent(btn.dataset.absent, btn.dataset.name)));
+  }
+
+  /* ─── Check In ─── */
+  async function checkInPresenter(id, name) {
+    const r = await api.checkInPresenter(id, getAdminToken());
+    if (r.success) {
+      const p = _presenters.find(x => x.ID === id);
+      if (p) { p.CheckedIn = 'TRUE'; p.CheckInTime = new Date().toISOString(); }
+      const now = new Date().toLocaleTimeString();
+      _history.unshift({ name, id, time: now, action: 'checked-in' });
+      showSuccess(interpolate(STRINGS.success.checkInMarked, { name }));
+      updateStats();
+      renderTable();
+      renderSearchResults(document.getElementById('checkin-search').value.trim());
+      renderHistory();
+    } else showError(r.error || STRINGS.errors.generic);
+  }
+
+  /* ─── Undo Check-In ─── */
+  async function markAbsent(id, name) {
+    const r = await api.markAbsent(id, getAdminToken());
+    if (r.success) {
+      const p = _presenters.find(x => x.ID === id);
+      if (p) { p.CheckedIn = 'FALSE'; p.CheckInTime = ''; }
+      const now = new Date().toLocaleTimeString();
+      _history.unshift({ name, id, time: now, action: 'undo' });
+      showToast(interpolate(STRINGS.success.markedAbsent, { name }), 'info');
+      updateStats();
+      renderTable();
+      renderHistory();
+    } else showError(r.error || STRINGS.errors.generic);
+  }
+
+  /* ─── Table ─── */
+  function renderTable() {
+    const filter = document.getElementById('table-filter').value;
+    let list = [..._presenters];
+    if (filter === 'checked-in')    list = list.filter(p => p.CheckedIn === 'TRUE' || p.CheckedIn === true);
+    if (filter === 'not-checked-in') list = list.filter(p => !(p.CheckedIn === 'TRUE' || p.CheckedIn === true));
+
+    const tbody = document.getElementById('checkin-tbody');
+    tbody.innerHTML = list.length === 0
+      ? `<tr><td colspan="7" class="admin-table__empty">No presenters match this filter.</td></tr>`
+      : list.map(p => {
+          const isIn = p.CheckedIn === 'TRUE' || p.CheckedIn === true;
+          const time = p.CheckInTime ? new Date(p.CheckInTime).toLocaleTimeString() : '—';
+          return `<tr>
+            <td><span style="font-family:var(--font-mono);font-size:var(--text-xs);color:var(--color-primary);font-weight:600;">${_esc(p.ID)}</span></td>
+            <td style="font-weight:600;">${_esc(p.Name)}</td>
+            <td><span style="font-family:var(--font-mono);">${_esc(p.PosterNumber || '—')}</span></td>
+            <td style="color:var(--color-text-muted);">${_esc(p.Department || '')}</td>
+            <td>${isIn ? '<span class="badge badge-success">✓ Checked In</span>' : '<span class="badge badge-neutral">Pending</span>'}</td>
+            <td style="color:var(--color-text-muted);font-size:var(--text-xs);">${time}</td>
+            <td>
+              <div class="admin-table__actions">
+                ${!isIn ? `<button type="button" class="btn btn-primary btn-sm" data-checkin="${_esc(p.ID)}" data-name="${_esc(p.Name)}">Check In</button>` : ''}
+                ${isIn  ? `<button type="button" class="btn btn-ghost btn-sm" data-absent="${_esc(p.ID)}" data-name="${_esc(p.Name)}">Undo Check-In</button>` : ''}
+              </div>
+            </td>
+          </tr>`;
+        }).join('');
+
+    tbody.querySelectorAll('[data-checkin]').forEach(btn => btn.addEventListener('click', () => checkInPresenter(btn.dataset.checkin, btn.dataset.name)));
+    tbody.querySelectorAll('[data-absent]').forEach(btn  => btn.addEventListener('click', () => markAbsent(btn.dataset.absent, btn.dataset.name)));
+  }
+
+  document.getElementById('table-filter').addEventListener('change', renderTable);
+
+  /* ─── History ─── */
+  function renderHistory() {
+    const el = document.getElementById('history-list');
+    if (_history.length === 0) {
+      el.innerHTML = '<p style="color:var(--color-text-muted);font-size:var(--text-sm);">No check-ins recorded yet.</p>';
+      return;
+    }
+    el.innerHTML = _history.slice(0, 20).map(h => `
+      <div style="display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2) 0;border-bottom:1px solid var(--color-border);font-size:var(--text-sm);">
+        <span style="font-size:var(--text-lg);">${h.action === 'checked-in' ? '✅' : '↩️'}</span>
+        <span style="flex:1;font-weight:600;">${_esc(h.name)}</span>
+        <span style="color:var(--color-text-muted);font-size:var(--text-xs);">${_esc(h.time)}</span>
+      </div>
+    `).join('');
+  }
+
+  function _esc(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+</script>
+</body>
+</html>

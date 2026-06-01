@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — Ava Judging System</title>
+  <link rel="stylesheet" href="../assets/css/variables.css" />
+  <link rel="stylesheet" href="../assets/css/base.css" />
+  <link rel="stylesheet" href="../assets/css/components.css" />
+  <link rel="stylesheet" href="../assets/css/admin.css" />
+</head>
+<body class="admin-body">
+<div class="admin-layout">
+  <nav class="admin-sidebar" id="admin-sidebar" aria-label="Admin navigation">
+    <div class="admin-sidebar__brand"><img src="../assets/img/logo.svg" alt="" width="28" height="28" /><span class="admin-sidebar__brand-name">Ava Admin</span></div>
+    <div class="admin-sidebar__scroll">
+      <ul class="admin-nav" role="list">
+        <li class="admin-nav__item"><a href="index.html"      class="admin-nav__link is-active"><span class="admin-nav__icon">📊</span>Dashboard</a></li>
+        <li class="admin-nav__item"><a href="presenters.html" class="admin-nav__link"><span class="admin-nav__icon">🎓</span>Presenters</a></li>
+        <li class="admin-nav__item"><a href="judges.html"     class="admin-nav__link"><span class="admin-nav__icon">⚖️</span>Judges</a></li>
+        <li class="admin-nav__item"><a href="tracks.html"     class="admin-nav__link"><span class="admin-nav__icon">🏷️</span>Tracks</a></li>
+        <li class="admin-nav__item"><a href="qr-manager.html" class="admin-nav__link"><span class="admin-nav__icon">📱</span>QR Codes</a></li>
+        <li class="admin-nav__item"><a href="checkin.html"    class="admin-nav__link"><span class="admin-nav__icon">✅</span>Check-In</a></li>
+        <li class="admin-nav__item"><a href="progress.html"   class="admin-nav__link"><span class="admin-nav__icon">📈</span>Progress</a></li>
+        <li class="admin-nav__item"><a href="results.html"    class="admin-nav__link"><span class="admin-nav__icon">🏆</span>Results</a></li>
+        <li class="admin-nav__item"><a href="reports.html"    class="admin-nav__link"><span class="admin-nav__icon">📋</span>Reports</a></li>
+        <li class="admin-nav__item"><a href="templates.html"  class="admin-nav__link"><span class="admin-nav__icon">📄</span>Templates</a></li>
+      </ul>
+    </div>
+    <div class="admin-sidebar__footer">
+      <div class="admin-sidebar__event-label">Event</div>
+      <div class="admin-sidebar__event-name" id="sidebar-event-name">Loading…</div>
+      <div class="admin-sidebar__status">
+        <span class="admin-sidebar__status-dot" id="sidebar-status-dot"></span>
+        <span id="sidebar-status-text">—</span>
+      </div>
+      <button type="button" class="btn btn-ghost btn-sm" id="sidebar-logout" style="width:100%;">Log Out</button>
+    </div>
+  </nav>
+  <div class="admin-sidebar-backdrop" id="sidebar-backdrop"></div>
+
+  <div class="admin-content-area">
+    <header class="admin-topbar">
+      <button class="admin-sidebar-toggle" id="sidebar-toggle" aria-label="Toggle navigation">☰</button>
+      <h1 class="admin-topbar__title">Live Event Dashboard</h1>
+      <div class="admin-topbar__right">
+        <span style="font-size:var(--text-xs);color:var(--color-text-muted);" id="last-updated" aria-live="polite">—</span>
+        <span class="admin-voting-badge" id="topbar-status-badge"></span>
+      </div>
+    </header>
+
+    <main class="admin-main" role="main">
+
+      <!-- Voting control strip -->
+      <div class="voting-control-strip" role="group" aria-label="Voting controls">
+        <div>
+          <div class="voting-control-strip__label">Voting Status</div>
+          <div id="voting-status-text" style="font-size:var(--text-base);font-weight:700;margin-top:var(--space-1);">—</div>
+        </div>
+        <div class="voting-control-strip__status"></div>
+        <div class="voting-control-strip__buttons">
+          <button type="button" class="btn btn-voting-open  btn-sm" id="btn-open"  style="min-width:110px;">▶ Open</button>
+          <button type="button" class="btn btn-voting-pause btn-sm" id="btn-pause" style="min-width:110px;">⏸ Pause</button>
+          <button type="button" class="btn btn-voting-close btn-sm" id="btn-close" style="min-width:110px;">⏹ Close</button>
+        </div>
+      </div>
+
+      <!-- Stats row (5 stat cards) -->
+      <div class="admin-stats-grid" aria-label="Event statistics">
+        <div class="stat-card stat-card--primary">
+          <div class="stat-card__label">Presenters / Checked In</div>
+          <div class="stat-card__value" id="stat-presenters">—</div>
+          <div class="stat-card__sub" id="stat-presenters-sub"></div>
+          <span class="stat-card__trend" aria-hidden="true">🎓</span>
+        </div>
+        <div class="stat-card stat-card--success">
+          <div class="stat-card__label">Judges / Logged In</div>
+          <div class="stat-card__value" id="stat-judges">—</div>
+          <div class="stat-card__sub" id="stat-judges-sub"></div>
+          <span class="stat-card__trend" aria-hidden="true">⚖️</span>
+        </div>
+        <div class="stat-card stat-card--accent">
+          <div class="stat-card__label">Total Votes</div>
+          <div class="stat-card__value" id="stat-votes">—</div>
+          <div class="stat-card__sub" id="stat-votes-sub"></div>
+          <span class="stat-card__trend" aria-hidden="true">📝</span>
+        </div>
+        <div class="stat-card stat-card--info">
+          <div class="stat-card__label">Completion</div>
+          <div class="stat-card__value" id="stat-completion">—</div>
+          <div class="stat-card__sub">judge assignments</div>
+          <span class="stat-card__trend" aria-hidden="true">📊</span>
+        </div>
+        <div class="stat-card stat-card--warning">
+          <div class="stat-card__label">Leading Presenter</div>
+          <div class="stat-card__value" id="stat-leader" style="font-size:var(--text-lg);line-height:1.2;">—</div>
+          <div class="stat-card__sub" id="stat-leader-score"></div>
+          <span class="stat-card__trend" aria-hidden="true">🏆</span>
+        </div>
+      </div>
+
+      <!-- Two-column layout: judge progress + recent votes -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-6);margin-bottom:var(--space-6);">
+
+        <!-- Judge progress mini-panel -->
+        <div class="admin-card">
+          <div class="admin-card__header">
+            <span class="admin-card__title">Judge Progress</span>
+            <div class="admin-card__actions">
+              <a href="progress.html" class="btn btn-ghost btn-sm">View All →</a>
+            </div>
+          </div>
+          <div class="admin-card__body" id="judge-progress-panel" style="padding:0;">
+            <div style="text-align:center;padding:var(--space-6);">
+              <div class="spinner" role="status" aria-label="Loading judge progress"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent votes feed -->
+        <div class="admin-card">
+          <div class="admin-card__header">
+            <span class="admin-card__title">Recent Votes</span>
+            <div class="admin-card__actions">
+              <span style="font-size:var(--text-xs);color:var(--color-text-muted);">Last 10</span>
+            </div>
+          </div>
+          <div class="admin-card__body--no-pad">
+            <div class="vote-feed" id="vote-feed" style="padding:var(--space-4) var(--space-5);">
+              <p style="color:var(--color-text-muted);font-size:var(--text-sm);">Loading…</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Alerts panel -->
+      <div id="alerts-panel" class="admin-card" style="margin-bottom:var(--space-6);" hidden>
+        <div class="admin-card__header">
+          <span class="admin-card__title" style="color:var(--color-warning);">⚠ Alerts</span>
+        </div>
+        <div class="admin-card__body" id="alerts-list"></div>
+      </div>
+
+      <!-- Live score chart: top 10 bar -->
+      <div class="admin-card">
+        <div class="admin-card__header">
+          <span class="admin-card__title">Top 10 Presenters — Live Scores</span>
+          <div class="admin-card__actions">
+            <a href="results.html" class="btn btn-ghost btn-sm">Full Leaderboard →</a>
+          </div>
+        </div>
+        <div class="admin-card__body">
+          <div style="height:300px;position:relative;">
+            <canvas id="top10-chart" aria-label="Top 10 presenters live score bar chart"></canvas>
+          </div>
+          <div id="chart-loading" style="text-align:center;padding:var(--space-4);color:var(--color-text-muted);font-size:var(--text-sm);">Waiting for score data…</div>
+        </div>
+      </div>
+
+      <!-- Quick actions -->
+      <div class="admin-card" style="margin-top:var(--space-6);">
+        <div class="admin-card__header"><span class="admin-card__title">Quick Actions</span></div>
+        <div class="admin-card__body" style="display:flex;gap:var(--space-3);flex-wrap:wrap;">
+          <button type="button" class="btn btn-secondary" id="qa-refresh">Refresh Results</button>
+          <button type="button" class="btn btn-secondary" id="qa-reminders">Send Reminders to Incomplete Judges</button>
+          <a href="reports.html" class="btn btn-secondary">View Reports</a>
+          <a href="qr-manager.html" class="btn btn-secondary">Print QR Codes</a>
+          <button type="button" class="btn btn-ghost" id="qa-export">Export Results CSV</button>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<div id="toast-container" role="region" aria-label="Notifications" aria-live="polite"></div>
+
+<script type="module">
+  import { CONFIG } from '../assets/js/config.js';
+  import { STRINGS, interpolate } from '../assets/js/i18n.js';
+  import * as api from '../assets/js/api.js';
+  import { requireAdminAuth, clearAdminSession, getAdminToken } from '../assets/js/auth.js';
+  import { showToast, showError, showSuccess, confirmDialog } from '../assets/js/ui.js';
+  import { renderBarChart } from '../assets/js/charts.js';
+
+  /* ─── Auth guard ─── */
+  const session = requireAdminAuth();
+  if (!session) throw new Error('Redirecting…');
+
+  /* ─── Sidebar ─── */
+  document.getElementById('sidebar-toggle').addEventListener('click', () => { document.getElementById('admin-sidebar').classList.toggle('is-open'); document.getElementById('sidebar-backdrop').classList.toggle('is-visible'); });
+  document.getElementById('sidebar-backdrop').addEventListener('click', () => { document.getElementById('admin-sidebar').classList.remove('is-open'); document.getElementById('sidebar-backdrop').classList.remove('is-visible'); });
+  document.getElementById('sidebar-logout').addEventListener('click', () => { clearAdminSession(); location.href = 'login.html'; });
+
+  /* ─── State ─── */
+  let _settings   = {};
+  let _presenters = [];
+  let _judges     = [];
+  let _progress   = [];
+  let _results    = [];
+  let _voteStats  = {};
+  let _recentVotes = [];
+  const POLL_INTERVAL = CONFIG.POLL.ADMIN_DASHBOARD; // 30s
+
+  /* ─── Boot ─── */
+  loadAll();
+  const _pollTimer = setInterval(loadAll, POLL_INTERVAL);
+  window.addEventListener('beforeunload', () => clearInterval(_pollTimer));
+
+  /* ─── Voting controls ─── */
+  document.getElementById('btn-open').addEventListener('click',  () => setVoting('open'));
+  document.getElementById('btn-pause').addEventListener('click', () => setVoting('paused'));
+  document.getElementById('btn-close').addEventListener('click', () => setVoting('closed'));
+
+  /* ─── Quick actions ─── */
+  document.getElementById('qa-refresh').addEventListener('click', async () => {
+    const r = await api.refreshResults();
+    if (r.success) { showSuccess(STRINGS.success.resultsRefreshed); loadAll(); }
+    else showError(r.error || STRINGS.errors.generic);
+  });
+
+  document.getElementById('qa-reminders').addEventListener('click', async () => {
+    const r = await api.sendBulkReminders(getAdminToken());
+    if (r.success) showToast('Reminders sent.', 'success');
+    else showError(r.error || STRINGS.errors.generic);
+  });
+
+  document.getElementById('qa-export').addEventListener('click', exportResultsCSV);
+
+  /* ─── Main data load (runs every 30s) ─── */
+  async function loadAll() {
+    const [sRes, pRes, jRes, prRes, lRes, vsRes] = await Promise.all([
+      api.getSettings(),
+      api.getAllPresenters(),
+      api.getAllJudges(),
+      api.getAllJudgeProgress(),
+      api.getLeaderboard(),
+      api.getVotingStats(),
+    ]);
+
+    if (sRes.success) {
+      _settings = sRes.data || {};
+      updateVotingUI(_settings.votingStatus);
+      document.getElementById('sidebar-event-name').textContent = _settings.eventName || '';
+    }
+    if (pRes.success)  _presenters  = pRes.data  || [];
+    if (jRes.success)  _judges      = jRes.data  || [];
+    if (prRes.success) _progress    = prRes.data  || [];
+    if (lRes.success)  _results     = lRes.data  || [];
+    if (vsRes.success) _voteStats   = vsRes.data  || {};
+
+    document.getElementById('last-updated').textContent = 'Updated ' + new Date().toLocaleTimeString();
+
+    updateStats();
+    updateJudgeProgressPanel();
+    updateVoteFeed();
+    updateAlertsPanel();
+    updateTop10Chart();
+  }
+
+  /* ─── Voting status ─── */
+  function updateVotingUI(status) {
+    const s = status || 'paused';
+    const badge = document.getElementById('topbar-status-badge');
+    badge.className = `admin-voting-badge admin-voting-badge--${s}`;
+    badge.innerHTML = `<span class="admin-voting-badge__dot"></span>${s.charAt(0).toUpperCase()+s.slice(1)}`;
+
+    const labels = { open: '▶ Voting is OPEN', paused: '⏸ Voting is PAUSED', closed: '⏹ Voting is CLOSED' };
+    const colors  = { open: 'var(--color-success)', paused: 'var(--color-warning)', closed: 'var(--color-danger)' };
+    const el = document.getElementById('voting-status-text');
+    el.textContent = labels[s] || s;
+    el.style.color = colors[s] || 'var(--color-text)';
+
+    document.getElementById('btn-open').disabled  = (s === 'open');
+    document.getElementById('btn-pause').disabled = (s === 'paused');
+    document.getElementById('btn-close').disabled = (s === 'closed');
+
+    const dot = document.getElementById('sidebar-status-dot');
+    dot.className = `admin-sidebar__status-dot admin-sidebar__status-dot--${s}`;
+    document.getElementById('sidebar-status-text').textContent = s.charAt(0).toUpperCase() + s.slice(1);
+  }
+
+  async function setVoting(newStatus) {
+    const msgs = { closed: STRINGS.confirm.closeVoting, paused: STRINGS.confirm.pauseVoting };
+    if (msgs[newStatus]) {
+      const ok = await confirmDialog({ title: 'Confirm', message: msgs[newStatus], confirmType: newStatus === 'closed' ? 'danger' : 'primary' });
+      if (!ok) return;
+    }
+    const r = await api.updateSettings({ votingStatus: newStatus }, getAdminToken());
+    if (r.success) {
+      const toastMsgs = { open: STRINGS.success.votingOpened, paused: STRINGS.success.votingPaused, closed: STRINGS.success.votingClosed };
+      showSuccess(toastMsgs[newStatus]);
+      _settings.votingStatus = newStatus;
+      updateVotingUI(newStatus);
+    } else showError(r.error || STRINGS.errors.generic);
+  }
+
+  /* ─── Stats row ─── */
+  function updateStats() {
+    const checkedIn = _presenters.filter(p => p.CheckedIn === 'TRUE' || p.CheckedIn === true).length;
+    const loggedIn  = _judges.filter(j => j.TokenUsed === 'TRUE' || j.TokenUsed === true).length;
+    const totalScored = _progress.reduce((s, j) => s + (j.scored || 0), 0);
+    const totalAssigned = _progress.reduce((s, j) => s + (j.total || 0), 0);
+    const completionPct = totalAssigned > 0 ? Math.round((totalScored / totalAssigned) * 100) : 0;
+
+    document.getElementById('stat-presenters').textContent    = `${_presenters.length} / ${checkedIn}`;
+    document.getElementById('stat-presenters-sub').textContent = `${checkedIn} checked in`;
+    document.getElementById('stat-judges').textContent         = `${_judges.length} / ${loggedIn}`;
+    document.getElementById('stat-judges-sub').textContent     = `${loggedIn} logged in`;
+    document.getElementById('stat-votes').textContent          = (_voteStats.totalVotes ?? '—');
+    document.getElementById('stat-votes-sub').textContent      = `${_voteStats.judgeVotes ?? 0} judge · ${_voteStats.audienceVotes ?? 0} audience`;
+    document.getElementById('stat-completion').textContent     = `${completionPct}%`;
+
+    const leader = _results[0];
+    if (leader) {
+      document.getElementById('stat-leader').textContent       = leader.Name;
+      document.getElementById('stat-leader-score').textContent = `Score: ${parseFloat(leader.FinalScore || 0).toFixed(2)}`;
+    }
+  }
+
+  /* ─── Judge progress mini-panel ─── */
+  function updateJudgeProgressPanel() {
+    const panel = document.getElementById('judge-progress-panel');
+    const inactivityMs = (parseInt(_settings.judgeInactivityMinutes) || 30) * 60 * 1000;
+
+    if (_progress.length === 0) {
+      panel.innerHTML = '<div style="text-align:center;padding:var(--space-6);color:var(--color-text-muted);font-size:var(--text-sm);">No judge data yet.</div>';
+      return;
+    }
+
+    const sorted = [..._progress].sort((a, b) => (a.completionPct || 0) - (b.completionPct || 0));
+    const top8 = sorted.slice(0, 8);
+
+    panel.innerHTML = top8.map(j => {
+      const pct     = Math.round(j.completionPct || 0);
+      const flagged = j.lastActivity && (Date.now() - new Date(j.lastActivity).getTime()) > inactivityMs;
+      return `
+        <div style="padding:var(--space-3) var(--space-5);border-bottom:1px solid var(--color-border);display:flex;align-items:center;gap:var(--space-3);">
+          ${flagged ? `<span title="Inactive" aria-label="Inactive" style="font-size:var(--text-sm);">⚠️</span>` : ''}
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:var(--text-sm);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${_esc(j.judgeName || j.judgeId)}</div>
+            <div class="judge-progress-card__bar" style="height:6px;margin-top:4px;background:var(--color-border);border-radius:3px;overflow:hidden;" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100">
+              <div style="height:100%;width:${pct}%;background:${pct === 100 ? 'var(--color-success)' : 'var(--color-primary)'};border-radius:3px;"></div>
+            </div>
+          </div>
+          <div style="font-family:var(--font-mono);font-size:var(--text-xs);color:var(--color-primary);white-space:nowrap;">${j.scored||0}/${j.total||0}</div>
+        </div>
+      `;
+    }).join('') + (sorted.length > 8 ? `<div style="padding:var(--space-3) var(--space-5);font-size:var(--text-xs);color:var(--color-text-muted);">+ ${sorted.length - 8} more judges → <a href="progress.html" style="color:var(--color-primary);">View all</a></div>` : '');
+  }
+
+  /* ─── Recent votes feed ─── */
+  function updateVoteFeed() {
+    const feed = document.getElementById('vote-feed');
+    const recent = _voteStats.recentVotes || [];
+
+    if (recent.length === 0) {
+      feed.innerHTML = '<p style="color:var(--color-text-muted);font-size:var(--text-sm);">No votes recorded yet.</p>';
+      return;
+    }
+
+    feed.innerHTML = recent.slice(0, 10).map(v => `
+      <div class="vote-feed-item">
+        <div class="vote-feed-item__icon" aria-hidden="true">${v.voterType === 'judge' ? '⚖️' : '👥'}</div>
+        <div class="vote-feed-item__body">
+          <div class="vote-feed-item__presenter">${_esc(v.presenterName || v.presenterID)}</div>
+          <div class="vote-feed-item__meta">${_esc(v.voterName || v.voterType)}</div>
+        </div>
+        <div class="vote-feed-item__score">${parseFloat(v.score || 0).toFixed(1)}</div>
+        <div class="vote-feed-item__time">${_relTime(v.timestamp)}</div>
+      </div>
+    `).join('');
+  }
+
+  /* ─── Alerts ─── */
+  function updateAlertsPanel() {
+    const alerts = [];
+    const inactivityMs = (parseInt(_settings.judgeInactivityMinutes) || 30) * 60 * 1000;
+
+    _progress.forEach(j => {
+      if (j.lastActivity && (Date.now() - new Date(j.lastActivity).getTime()) > inactivityMs) {
+        alerts.push(`Judge ${j.judgeName || j.judgeId} has been inactive for more than ${Math.floor(inactivityMs / 60000)} minutes.`);
+      }
+    });
+
+    const panel = document.getElementById('alerts-panel');
+    const list  = document.getElementById('alerts-list');
+
+    if (alerts.length === 0) {
+      panel.hidden = true;
+      return;
+    }
+
+    panel.hidden = false;
+    list.innerHTML = alerts.map(a => `
+      <div style="display:flex;align-items:flex-start;gap:var(--space-3);padding:var(--space-2) 0;border-bottom:1px solid var(--color-border);font-size:var(--text-sm);">
+        <span style="color:var(--color-warning);">⚠</span>
+        <span>${_esc(a)}</span>
+      </div>
+    `).join('');
+  }
+
+  /* ─── Top 10 chart ─── */
+  let _chartRendered = false;
+
+  async function updateTop10Chart() {
+    const top10 = _results.slice(0, 10);
+
+    if (top10.length === 0) {
+      document.getElementById('chart-loading').style.display = 'block';
+      return;
+    }
+
+    document.getElementById('chart-loading').style.display = 'none';
+    document.getElementById('top10-chart').style.display = 'block';
+
+    await renderBarChart('top10-chart', {
+      labels: top10.map(p => p.Name.length > 18 ? p.Name.slice(0, 16) + '…' : p.Name),
+      datasets: [{
+        label: 'Final Score',
+        data: top10.map(p => parseFloat(p.FinalScore) || 0),
+        color: CONFIG.CHART_COLORS.primary,
+      }],
+    }, { yMax: parseFloat(_settings.maxJudgeScore) || 25, yLabel: 'Score' }).catch(() => {});
+  }
+
+  /* ─── CSV Export ─── */
+  function exportResultsCSV() {
+    if (_results.length === 0) { showToast(STRINGS.errors.noDataToExport, 'warning'); return; }
+    const headers = ['OverallRank','Name','Department','Track','JudgeAvg','AudienceAvg','FinalScore'];
+    const rows = _results.map(r => headers.map(h => String(r[h] ?? '')));
+    const csv = [headers, ...rows].map(r => r.map(v => `"${v.replace(/"/g,'""')}"`).join(',')).join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'results.csv'; a.click();
+    showToast(STRINGS.success.exportReady, 'success');
+  }
+
+  /* ─── Helpers ─── */
+  function _relTime(ts) {
+    if (!ts) return '—';
+    const diff = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+    return Math.floor(diff / 3600) + 'h ago';
+  }
+
+  function _esc(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+</script>
+</body>
+</html>

@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Presenters — Ava Judging System</title>
+  <link rel="stylesheet" href="../assets/css/variables.css" />
+  <link rel="stylesheet" href="../assets/css/base.css" />
+  <link rel="stylesheet" href="../assets/css/components.css" />
+  <link rel="stylesheet" href="../assets/css/admin.css" />
+</head>
+<body class="admin-body">
+
+<div class="admin-layout">
+  <!-- Sidebar -->
+  <nav class="admin-sidebar" id="admin-sidebar" aria-label="Admin navigation">
+    <div class="admin-sidebar__brand">
+      <img src="../assets/img/logo.svg" alt="" width="28" height="28" />
+      <span class="admin-sidebar__brand-name">Ava Admin</span>
+    </div>
+    <div class="admin-sidebar__scroll">
+      <ul class="admin-nav" role="list">
+        <li class="admin-nav__item"><a href="index.html"       class="admin-nav__link"><span class="admin-nav__icon">📊</span>Dashboard</a></li>
+        <li class="admin-nav__item"><a href="presenters.html"  class="admin-nav__link is-active"><span class="admin-nav__icon">🎓</span>Presenters</a></li>
+        <li class="admin-nav__item"><a href="judges.html"      class="admin-nav__link"><span class="admin-nav__icon">⚖️</span>Judges</a></li>
+        <li class="admin-nav__item"><a href="tracks.html"      class="admin-nav__link"><span class="admin-nav__icon">🏷️</span>Tracks</a></li>
+        <li class="admin-nav__item"><a href="qr-manager.html"  class="admin-nav__link"><span class="admin-nav__icon">📱</span>QR Codes</a></li>
+        <li class="admin-nav__item"><a href="checkin.html"     class="admin-nav__link"><span class="admin-nav__icon">✅</span>Check-In</a></li>
+        <li class="admin-nav__item"><a href="progress.html"    class="admin-nav__link"><span class="admin-nav__icon">📈</span>Progress</a></li>
+        <li class="admin-nav__item"><a href="results.html"     class="admin-nav__link"><span class="admin-nav__icon">🏆</span>Results</a></li>
+        <li class="admin-nav__item"><a href="reports.html"     class="admin-nav__link"><span class="admin-nav__icon">📋</span>Reports</a></li>
+        <li class="admin-nav__item"><a href="templates.html"   class="admin-nav__link"><span class="admin-nav__icon">📄</span>Templates</a></li>
+      </ul>
+    </div>
+    <div class="admin-sidebar__footer">
+      <div class="admin-sidebar__event-label">Event</div>
+      <div class="admin-sidebar__event-name" id="sidebar-event-name">Loading…</div>
+      <button type="button" class="btn btn-ghost btn-sm" id="sidebar-logout" style="width:100%;">Log Out</button>
+    </div>
+  </nav>
+  <div class="admin-sidebar-backdrop" id="sidebar-backdrop"></div>
+
+  <!-- Content -->
+  <div class="admin-content-area">
+    <header class="admin-topbar">
+      <button class="admin-sidebar-toggle" id="sidebar-toggle" aria-label="Toggle navigation">☰</button>
+      <h1 class="admin-topbar__title">Manage Presenters</h1>
+      <div class="admin-topbar__right">
+        <span class="admin-voting-badge" id="topbar-status-badge"></span>
+      </div>
+    </header>
+
+    <main class="admin-main" role="main">
+      <!-- Page header -->
+      <div class="admin-page-header">
+        <div>
+          <div class="admin-page-header__title">Presenters</div>
+          <div class="admin-page-header__subtitle" id="presenter-count-label">Loading…</div>
+        </div>
+        <div class="admin-page-header__actions">
+          <button type="button" class="btn btn-ghost btn-sm" id="refresh-btn" aria-label="Refresh">↻ Refresh</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="export-csv-btn">Export CSV</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="import-csv-btn">Import CSV</button>
+          <button type="button" class="btn btn-primary" id="add-presenter-btn">+ Add Presenter</button>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="admin-table-wrap">
+        <!-- Toolbar -->
+        <div class="admin-toolbar">
+          <div class="admin-toolbar__search">
+            <input type="search" id="search-input" class="form-input" placeholder="Search name, ID, poster…" aria-label="Search presenters" />
+          </div>
+          <div class="admin-toolbar__filters">
+            <select id="filter-track" class="form-select" aria-label="Filter by track">
+              <option value="">All Tracks</option>
+            </select>
+            <select id="filter-checkin" class="form-select" aria-label="Filter by check-in">
+              <option value="">All</option>
+              <option value="checked-in">Checked In</option>
+              <option value="not-checked-in">Not Checked In</option>
+            </select>
+          </div>
+          <div class="admin-toolbar__actions">
+            <button type="button" class="btn btn-ghost btn-sm" id="select-all-btn">Select All</button>
+          </div>
+        </div>
+
+        <!-- Bulk bar -->
+        <div class="admin-bulk-bar" id="bulk-bar">
+          <span class="admin-bulk-bar__count" id="bulk-count">0 selected</span>
+          <div class="admin-bulk-bar__actions">
+            <button type="button" class="btn btn-secondary btn-sm" id="bulk-assign-track">Assign Track</button>
+            <button type="button" class="btn btn-danger btn-sm" id="bulk-delete">Delete Selected</button>
+          </div>
+          <span class="admin-bulk-bar__dismiss" id="bulk-dismiss" role="button" tabindex="0" aria-label="Clear selection">×</span>
+        </div>
+
+        <!-- Table -->
+        <table class="admin-table" id="presenters-table" aria-label="Presenters list">
+          <thead>
+            <tr>
+              <th style="width:36px;"><input type="checkbox" id="check-all" aria-label="Select all" /></th>
+              <th class="sortable" data-sort="ID">ID <span class="sort-icon">↕</span></th>
+              <th class="sortable" data-sort="Name">Name <span class="sort-icon">↕</span></th>
+              <th class="sortable" data-sort="Department">Department <span class="sort-icon">↕</span></th>
+              <th class="sortable" data-sort="Track">Track <span class="sort-icon">↕</span></th>
+              <th class="sortable" data-sort="PosterNumber">Poster # <span class="sort-icon">↕</span></th>
+              <th class="sortable" data-sort="CheckedIn">Check-In <span class="sort-icon">↕</span></th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="presenters-tbody">
+            <tr><td colspan="8" class="admin-table__empty">Loading…</td></tr>
+          </tbody>
+        </table>
+
+        <!-- Footer / pagination -->
+        <div class="admin-table-footer">
+          <span id="pagination-info"></span>
+          <div id="pagination-controls"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ADD / EDIT MODAL -->
+<div class="modal-overlay" id="presenter-modal" role="dialog" aria-modal="true" aria-labelledby="pmodal-title">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h2 class="modal-title" id="pmodal-title">Add Presenter</h2>
+      <button type="button" class="modal-close" id="pmodal-close" aria-label="Close">×</button>
+    </div>
+    <form id="presenter-form" novalidate>
+      <div class="modal-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4);">
+          <div class="form-group" style="grid-column:1/-1;">
+            <label class="form-label" for="pf-name">Full Name *</label>
+            <input type="text" id="pf-name" name="Name" class="form-input" required maxlength="100" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="pf-dept">Department <span aria-hidden="true">*</span></label>
+            <input type="text" id="pf-dept" name="Department" class="form-input" required maxlength="80" placeholder="e.g. Computer Science" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="pf-email">Email</label>
+            <input type="email" id="pf-email" name="Email" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="pf-poster">Poster Number <span style="font-size:var(--text-xs);font-weight:400;color:var(--color-text-muted);">(optional — physical board number)</span></label>
+            <input type="text" id="pf-poster" name="PosterNumber" class="form-input" placeholder="e.g. 101 or A3" maxlength="10" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="pf-track">Track</label>
+            <select id="pf-track" name="Track" class="form-select">
+              <option value="">— No Track —</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" id="pmodal-cancel">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="pmodal-save">Save Presenter</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- CSV IMPORT MODAL -->
+<div class="modal-overlay" id="import-modal" role="dialog" aria-modal="true" aria-labelledby="import-title">
+  <div class="modal-dialog" style="max-width:640px;">
+    <div class="modal-header">
+      <h2 class="modal-title" id="import-title">Import Presenters from CSV</h2>
+      <button type="button" class="modal-close" id="import-close" aria-label="Close">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:var(--text-sm);color:var(--color-text-muted);margin-bottom:var(--space-4);">
+        Upload a CSV with columns: <code>Name, Department, Email, PosterNumber, Track</code>.
+        <a href="../demo/sample-presenters.csv" download style="color:var(--color-primary);">Download template ↓</a>
+      </p>
+      <div class="form-group">
+        <label class="form-label" for="csv-file-input">CSV File</label>
+        <input type="file" id="csv-file-input" accept=".csv,text/csv" class="form-input" style="padding:var(--space-2);" />
+      </div>
+      <div id="csv-preview" hidden>
+        <p style="font-size:var(--text-sm);font-weight:var(--font-weight-semibold);margin-bottom:var(--space-2);color:var(--color-text);" id="csv-preview-label"></p>
+        <div style="max-height:240px;overflow-y:auto;border:1px solid var(--color-border);border-radius:var(--radius-md);">
+          <table class="admin-table" id="csv-preview-table" style="font-size:var(--text-xs);">
+            <thead><tr id="csv-header-row"></tr></thead>
+            <tbody id="csv-body-rows"></tbody>
+          </table>
+        </div>
+        <div id="csv-errors" style="margin-top:var(--space-3);display:none;"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-ghost" id="import-cancel">Cancel</button>
+      <button type="button" class="btn btn-primary" id="import-confirm" disabled>Import</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container" role="region" aria-label="Notifications" aria-live="polite"></div>
+
+<script type="module">
+  import { CONFIG } from '../assets/js/config.js';
+  import { STRINGS, interpolate } from '../assets/js/i18n.js';
+  import * as api from '../assets/js/api.js';
+  import { requireAdminAuth, clearAdminSession, getAdminToken } from '../assets/js/auth.js';
+  import { showToast, showError, showSuccess, confirmDialog, openModal, closeModal, paginate, renderPagination, sortBy, filterByQuery } from '../assets/js/ui.js';
+
+  /* ─── Auth guard ─── */
+  const session = requireAdminAuth();
+  if (!session) throw new Error('Redirecting…');
+
+  /* ─── Sidebar ─── */
+  document.getElementById('sidebar-toggle').addEventListener('click', toggleSidebar);
+  document.getElementById('sidebar-backdrop').addEventListener('click', closeSidebar);
+  document.getElementById('sidebar-logout').addEventListener('click', () => { clearAdminSession(); location.href = 'login.html'; });
+
+  function toggleSidebar() {
+    document.getElementById('admin-sidebar').classList.toggle('is-open');
+    document.getElementById('sidebar-backdrop').classList.toggle('is-visible');
+  }
+  function closeSidebar() {
+    document.getElementById('admin-sidebar').classList.remove('is-open');
+    document.getElementById('sidebar-backdrop').classList.remove('is-visible');
+  }
+
+  /* ─── State ─── */
+  let _presenters = [];
+  let _tracks     = [];
+  let _filtered   = [];
+  let _selected   = new Set();
+  let _sortKey    = 'Name';
+  let _sortDir    = 'asc';
+  let _page       = 1;
+  let _editingId  = null;
+  let _csvRows    = [];
+  const PER_PAGE  = CONFIG.PAGINATION.PRESENTERS_PER_PAGE;
+
+  /* ─── Boot ─── */
+  document.getElementById('refresh-btn').addEventListener('click', loadData);
+  loadData();
+
+  async function loadData() {
+    const [pRes, tRes, sRes] = await Promise.all([api.getAllPresenters(), api.getAllTracks(), api.getSettings()]);
+
+    if (pRes.success) _presenters = pRes.data || [];
+    if (tRes.success) _tracks = tRes.data || [];
+    if (sRes.success) {
+      document.getElementById('sidebar-event-name').textContent = sRes.data?.eventName || '';
+      updateStatusBadge(sRes.data?.votingStatus);
+    }
+
+    populateTrackFilters();
+    applyFilter();
+  }
+
+  function updateStatusBadge(status) {
+    const el = document.getElementById('topbar-status-badge');
+    const labels = { open: 'Open', paused: 'Paused', closed: 'Closed' };
+    const s = status || 'paused';
+    el.className = `admin-voting-badge admin-voting-badge--${s}`;
+    el.innerHTML = `<span class="admin-voting-badge__dot"></span>${labels[s] || s}`;
+  }
+
+  function populateTrackFilters() {
+    const filterSel = document.getElementById('filter-track');
+    const modalSel  = document.getElementById('pf-track');
+    [filterSel, modalSel].forEach(sel => {
+      const firstOpt = sel.options[0];
+      sel.innerHTML = '';
+      sel.appendChild(firstOpt.cloneNode(true));
+      _tracks.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t.Name || t.TrackID;
+        opt.textContent = t.Name;
+        sel.appendChild(opt);
+      });
+    });
+    document.getElementById('presenter-count-label').textContent = `${_presenters.length} presenters total`;
+  }
+
+  /* ─── Filtering + sorting + pagination ─── */
+  function applyFilter() {
+    const query    = document.getElementById('search-input').value;
+    const track    = document.getElementById('filter-track').value;
+    const checkin  = document.getElementById('filter-checkin').value;
+
+    let list = filterByQuery(_presenters, query, ['Name','ID','PosterNumber','Department']);
+
+    if (track)   list = list.filter(p => p.Track === track);
+    if (checkin === 'checked-in')     list = list.filter(p => p.CheckedIn === 'TRUE' || p.CheckedIn === true);
+    if (checkin === 'not-checked-in') list = list.filter(p => p.CheckedIn !== 'TRUE' && p.CheckedIn !== true);
+
+    _filtered = sortBy(list, _sortKey, _sortDir);
+    _page = 1;
+    render();
+  }
+
+  function render() {
+    const { items, totalPages, total, from, to, page } = paginate(_filtered, _page, PER_PAGE);
+    _page = page;
+
+    const tbody = document.getElementById('presenters-tbody');
+    if (items.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="9" class="admin-table__empty">No presenters found.</td></tr>`;
+    } else {
+      tbody.innerHTML = items.map(p => {
+        const checkedIn = p.CheckedIn === 'TRUE' || p.CheckedIn === true;
+        const isSelected = _selected.has(p.ID);
+        return `<tr class="${isSelected ? 'is-selected' : ''}">
+          <td><input type="checkbox" aria-label="Select ${_esc(p.Name)}" data-id="${_esc(p.ID)}" class="row-check" ${isSelected ? 'checked' : ''} /></td>
+          <td><span style="font-family:var(--font-mono);font-size:var(--text-xs);color:var(--color-primary);font-weight:600;">${_esc(p.ID)}</span></td>
+          <td style="font-weight:var(--font-weight-semibold);">${_esc(p.Name)}</td>
+          <td style="color:var(--color-text-muted);">${_esc(p.Department || '')}</td>
+          <td>${p.Track ? `<span class="track-tag" style="background:var(--color-primary-50);color:var(--color-primary);">${_esc(p.Track)}</span>` : '<span style="color:var(--color-text-muted);">—</span>'}</td>
+          <td><span style="font-family:var(--font-mono);font-size:var(--text-sm);">${_esc(p.PosterNumber || '—')}</span></td>
+          <td>
+            ${checkedIn
+              ? `<span class="badge badge-success">✓ Checked In</span>`
+              : `<span class="badge badge-neutral">Pending</span>`}
+          </td>
+          <td>
+            <div class="admin-table__actions">
+              ${!checkedIn
+                ? `<button type="button" class="btn btn-secondary btn-sm" data-checkin="${_esc(p.ID)}" data-name="${_esc(p.Name)}" aria-label="Check in ${_esc(p.Name)}">✓ Check In</button>`
+                : ``}
+              <button type="button" class="btn btn-ghost btn-sm" data-edit="${_esc(p.ID)}" aria-label="Edit ${_esc(p.Name)}">Edit</button>
+              <button type="button" class="btn btn-danger btn-sm" data-delete="${_esc(p.ID)}" data-name="${_esc(p.Name)}" aria-label="Delete ${_esc(p.Name)}">Delete</button>
+            </div>
+          </td>
+        </tr>`;
+      }).join('');
+
+      // Bind row events
+      tbody.querySelectorAll('.row-check').forEach(cb => cb.addEventListener('change', () => {
+        const id = cb.dataset.id;
+        if (cb.checked) _selected.add(id); else _selected.delete(id);
+        updateBulkBar();
+        const row = cb.closest('tr');
+        row.classList.toggle('is-selected', cb.checked);
+      }));
+      tbody.querySelectorAll('[data-checkin]').forEach(btn => btn.addEventListener('click', () => quickCheckIn(btn.dataset.checkin, btn.dataset.name)));
+      tbody.querySelectorAll('[data-edit]').forEach(btn => btn.addEventListener('click', () => openEditModal(btn.dataset.edit)));
+      tbody.querySelectorAll('[data-delete]').forEach(btn => btn.addEventListener('click', () => deletePresenter(btn.dataset.delete, btn.dataset.name)));
+    }
+
+    document.getElementById('pagination-info').textContent = total > 0 ? `Showing ${from}–${to} of ${total}` : '';
+    renderPagination('pagination-controls', { page: _page, totalPages, total, from, to }, (p) => { _page = p; render(); });
+  }
+
+  /* ─── Sort ─── */
+  document.querySelectorAll('#presenters-table th.sortable').forEach(th => {
+    th.addEventListener('click', () => {
+      const key = th.dataset.sort;
+      if (_sortKey === key) _sortDir = _sortDir === 'asc' ? 'desc' : 'asc';
+      else { _sortKey = key; _sortDir = 'asc'; }
+      document.querySelectorAll('#presenters-table th').forEach(h => h.classList.remove('sort-asc','sort-desc'));
+      th.classList.add(`sort-${_sortDir}`);
+      th.querySelector('.sort-icon').textContent = _sortDir === 'asc' ? '↑' : '↓';
+      applyFilter();
+    });
+  });
+
+  /* ─── Search + filter events ─── */
+  document.getElementById('search-input').addEventListener('input', applyFilter);
+  document.getElementById('filter-track').addEventListener('change', applyFilter);
+  document.getElementById('filter-checkin').addEventListener('change', applyFilter);
+
+  /* ─── Select All ─── */
+  document.getElementById('check-all').addEventListener('change', function() {
+    _filtered.forEach(p => { if (this.checked) _selected.add(p.ID); else _selected.delete(p.ID); });
+    render();
+    updateBulkBar();
+  });
+  document.getElementById('select-all-btn').addEventListener('click', () => {
+    _filtered.forEach(p => _selected.add(p.ID));
+    render();
+    updateBulkBar();
+  });
+
+  function updateBulkBar() {
+    const bar = document.getElementById('bulk-bar');
+    document.getElementById('bulk-count').textContent = `${_selected.size} selected`;
+    bar.classList.toggle('is-visible', _selected.size > 0);
+  }
+
+  document.getElementById('bulk-dismiss').addEventListener('click', () => {
+    _selected.clear();
+    render();
+    updateBulkBar();
+  });
+  document.getElementById('bulk-dismiss').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('bulk-dismiss').click(); });
+
+  document.getElementById('bulk-delete').addEventListener('click', async () => {
+    if (_selected.size === 0) return;
+    const confirmed = await confirmDialog({
+      title: 'Delete Presenters',
+      message: interpolate(STRINGS.confirm.bulkDelete, { count: _selected.size }),
+      confirmText: 'Delete All',
+      confirmType: 'danger',
+    });
+    if (!confirmed) return;
+
+    const token = getAdminToken();
+    let deleted = 0;
+    for (const id of [..._selected]) {
+      const r = await api.deletePresenter(id, token);
+      if (r.success) { deleted++; _presenters = _presenters.filter(p => p.ID !== id); }
+    }
+    _selected.clear();
+    showSuccess(interpolate(STRINGS.success.presenterDeleted, { count: deleted }));
+    updateBulkBar();
+    applyFilter();
+  });
+
+  /* ─── Add / Edit Modal ─── */
+  document.getElementById('add-presenter-btn').addEventListener('click', openAddModal);
+  document.getElementById('pmodal-close').addEventListener('click', () => closeModal('presenter-modal'));
+  document.getElementById('pmodal-cancel').addEventListener('click', () => closeModal('presenter-modal'));
+
+  function openAddModal() {
+    _editingId = null;
+    document.getElementById('pmodal-title').textContent = 'Add Presenter';
+    document.getElementById('presenter-form').reset();
+    openModal('presenter-modal');
+  }
+
+  function openEditModal(id) {
+    const p = _presenters.find(x => x.ID === id);
+    if (!p) return;
+    _editingId = id;
+    document.getElementById('pmodal-title').textContent = 'Edit Presenter';
+    document.getElementById('pf-name').value   = p.Name || '';
+    document.getElementById('pf-dept').value   = p.Department || '';
+    document.getElementById('pf-email').value  = p.Email || '';
+    document.getElementById('pf-poster').value = p.PosterNumber || '';
+    document.getElementById('pf-track').value  = p.Track || '';
+    openModal('presenter-modal');
+  }
+
+  document.getElementById('presenter-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('pmodal-save');
+    btn.disabled = true;
+
+    const name = document.getElementById('pf-name').value.trim();
+    if (!name) { showError('Name is required.'); btn.disabled = false; return; }
+
+    const dept = document.getElementById('pf-dept').value.trim();
+    if (!dept) { showError('Department is required.'); btn.disabled = false; return; }
+
+    const data = {
+      Name:         name,
+      Department:   dept,
+      Email:        document.getElementById('pf-email').value.trim(),
+      PosterNumber: document.getElementById('pf-poster').value.trim(),
+      Track:        document.getElementById('pf-track').value,
+    };
+
+    const token = getAdminToken();
+    let result;
+
+    if (_editingId) {
+      result = await api.editPresenter(_editingId, data, token);
+      if (result.success) showSuccess(STRINGS.success.presenterUpdated);
+    } else {
+      result = await api.addPresenter(data, token);
+      if (result.success) showSuccess(STRINGS.success.presenterAdded);
+    }
+
+    btn.disabled = false;
+    if (!result.success) { showError(result.error || STRINGS.errors.generic); return; }
+    closeModal('presenter-modal');
+    // Reload from server so the table always reflects the real Sheet data
+    await loadData();
+  });
+
+  /* ─── Delete ─── */
+  async function deletePresenter(id, name) {
+    const confirmed = await confirmDialog({
+      title: 'Delete Presenter',
+      message: interpolate(STRINGS.confirm.deletePresenter, { name }),
+      confirmText: 'Delete',
+      confirmType: 'danger',
+    });
+    if (!confirmed) return;
+    const r = await api.deletePresenter(id, getAdminToken());
+    if (r.success) {
+      showToast(STRINGS.success.presenterDeleted, 'success');
+      await loadData();
+    } else {
+      showError(r.error || STRINGS.errors.generic);
+    }
+  }
+
+  /* ─── Quick Check-In from Presenters table ─── */
+  async function quickCheckIn(id, name) {
+    const r = await api.checkInPresenter(id, getAdminToken());
+    if (r.success) {
+      showToast(`✓ ${name} checked in.`, 'success', { duration: 2500 });
+      await loadData();
+    } else {
+      showError(r.error || STRINGS.errors.generic);
+    }
+  }
+
+  /* ─── CSV Export ─── */
+  document.getElementById('export-csv-btn').addEventListener('click', async () => {
+    const { exportResultsCSV } = await import('../assets/js/export.js');
+    const headers = ['ID','Name','Department','Email','PosterNumber','Track','CheckedIn'];
+    const rows = _presenters.map(p => headers.map(h => String(p[h] ?? '')));
+    const csv = [headers, ...rows].map(r => r.map(v => `"${v.replace(/"/g,'""')}"`).join(',')).join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = 'presenters.csv'; a.click();
+    showToast(STRINGS.success.exportReady, 'success');
+  });
+
+  /* ─── CSV Import ─── */
+  document.getElementById('import-csv-btn').addEventListener('click', () => openModal('import-modal'));
+  document.getElementById('import-close').addEventListener('click', () => closeModal('import-modal'));
+  document.getElementById('import-cancel').addEventListener('click', () => closeModal('import-modal'));
+
+  document.getElementById('csv-file-input').addEventListener('change', function() {
+    const file = this.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => parseCSVPreview(e.target.result);
+    reader.readAsText(file);
+  });
+
+  function parseCSVPreview(text) {
+    const lines = text.trim().split(/\r?\n/);
+    if (lines.length < 2) { showError(STRINGS.errors.csvNoData); return; }
+
+    const headers = lines[0].split(',').map(h => h.replace(/^"|"$/g,'').trim());
+    _csvRows = lines.slice(1).map(line => {
+      const vals = line.split(',').map(v => v.replace(/^"|"$/g,'').trim());
+      const obj = {};
+      headers.forEach((h, i) => { obj[h] = vals[i] || ''; });
+      return obj;
+    }).filter(r => Object.values(r).some(v => v));
+
+    const previewEl = document.getElementById('csv-preview');
+    const headerRow = document.getElementById('csv-header-row');
+    const bodyRows  = document.getElementById('csv-body-rows');
+
+    headerRow.innerHTML = headers.map(h => `<th style="padding:6px 10px;">${_esc(h)}</th>`).join('');
+    bodyRows.innerHTML  = _csvRows.slice(0, 10).map(row =>
+      `<tr>${headers.map(h => `<td style="padding:4px 10px;">${_esc(row[h] || '')}</td>`).join('')}</tr>`
+    ).join('');
+
+    document.getElementById('csv-preview-label').textContent = `Preview: ${_csvRows.length} rows found${_csvRows.length > 10 ? ' (showing first 10)' : ''}`;
+    previewEl.hidden = false;
+    document.getElementById('import-confirm').disabled = (_csvRows.length === 0);
+  }
+
+  document.getElementById('import-confirm').addEventListener('click', async () => {
+    const btn = document.getElementById('import-confirm');
+    btn.disabled = true;
+    btn.textContent = 'Importing…';
+
+    const headers = ['ID','Name','Department','Email','PosterNumber','Track'];
+    const csv = [headers, ..._csvRows.map(r => headers.map(h => r[h] || ''))].map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+
+    const result = await api.importPresenters(csv, getAdminToken());
+    btn.disabled = false;
+    btn.textContent = 'Import';
+
+    if (!result.success) { showError(result.error || STRINGS.errors.generic); return; }
+    showSuccess(interpolate(STRINGS.success.presentersImported, { count: _csvRows.length }));
+    closeModal('import-modal');
+    loadData();
+  });
+
+  function _esc(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+</script>
+</body>
+</html>

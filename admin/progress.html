@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Judge Progress — Ava Judging System</title>
+  <link rel="stylesheet" href="../assets/css/variables.css" />
+  <link rel="stylesheet" href="../assets/css/base.css" />
+  <link rel="stylesheet" href="../assets/css/components.css" />
+  <link rel="stylesheet" href="../assets/css/admin.css" />
+</head>
+<body class="admin-body">
+<div class="admin-layout">
+  <nav class="admin-sidebar" id="admin-sidebar" aria-label="Admin navigation">
+    <div class="admin-sidebar__brand"><img src="../assets/img/logo.svg" alt="" width="28" height="28" /><span class="admin-sidebar__brand-name">Ava Admin</span></div>
+    <div class="admin-sidebar__scroll">
+      <ul class="admin-nav" role="list">
+        <li class="admin-nav__item"><a href="index.html"      class="admin-nav__link"><span class="admin-nav__icon">📊</span>Dashboard</a></li>
+        <li class="admin-nav__item"><a href="presenters.html" class="admin-nav__link"><span class="admin-nav__icon">🎓</span>Presenters</a></li>
+        <li class="admin-nav__item"><a href="judges.html"     class="admin-nav__link"><span class="admin-nav__icon">⚖️</span>Judges</a></li>
+        <li class="admin-nav__item"><a href="tracks.html"     class="admin-nav__link"><span class="admin-nav__icon">🏷️</span>Tracks</a></li>
+        <li class="admin-nav__item"><a href="qr-manager.html" class="admin-nav__link"><span class="admin-nav__icon">📱</span>QR Codes</a></li>
+        <li class="admin-nav__item"><a href="checkin.html"    class="admin-nav__link"><span class="admin-nav__icon">✅</span>Check-In</a></li>
+        <li class="admin-nav__item"><a href="progress.html"   class="admin-nav__link is-active"><span class="admin-nav__icon">📈</span>Progress</a></li>
+        <li class="admin-nav__item"><a href="results.html"    class="admin-nav__link"><span class="admin-nav__icon">🏆</span>Results</a></li>
+        <li class="admin-nav__item"><a href="reports.html"    class="admin-nav__link"><span class="admin-nav__icon">📋</span>Reports</a></li>
+        <li class="admin-nav__item"><a href="templates.html"  class="admin-nav__link"><span class="admin-nav__icon">📄</span>Templates</a></li>
+      </ul>
+    </div>
+    <div class="admin-sidebar__footer">
+      <div class="admin-sidebar__event-label">Event</div>
+      <div class="admin-sidebar__event-name" id="sidebar-event-name">Loading…</div>
+      <button type="button" class="btn btn-ghost btn-sm" id="sidebar-logout" style="width:100%;">Log Out</button>
+    </div>
+  </nav>
+  <div class="admin-sidebar-backdrop" id="sidebar-backdrop"></div>
+
+  <div class="admin-content-area">
+    <header class="admin-topbar">
+      <button class="admin-sidebar-toggle" id="sidebar-toggle" aria-label="Toggle navigation">☰</button>
+      <h1 class="admin-topbar__title">Judge Progress</h1>
+      <div class="admin-topbar__right">
+        <span style="font-size:var(--text-xs);color:var(--color-text-muted);" id="last-updated">—</span>
+        <span class="admin-voting-badge" id="topbar-status-badge"></span>
+      </div>
+    </header>
+
+    <main class="admin-main" role="main">
+
+      <!-- Summary row -->
+      <div class="admin-stats-grid" style="grid-template-columns:repeat(4,1fr);">
+        <div class="stat-card stat-card--primary">
+          <div class="stat-card__label">Total Judges</div>
+          <div class="stat-card__value" id="stat-total-judges">—</div>
+          <span class="stat-card__trend" aria-hidden="true">⚖️</span>
+        </div>
+        <div class="stat-card stat-card--success">
+          <div class="stat-card__label">Completed (100%)</div>
+          <div class="stat-card__value" id="stat-complete">—</div>
+          <span class="stat-card__trend" aria-hidden="true">✅</span>
+        </div>
+        <div class="stat-card stat-card--accent">
+          <div class="stat-card__label">Total Scores</div>
+          <div class="stat-card__value" id="stat-total-scores">—</div>
+          <span class="stat-card__trend" aria-hidden="true">📝</span>
+        </div>
+        <div class="stat-card stat-card--warning">
+          <div class="stat-card__label">Inactive Judges</div>
+          <div class="stat-card__value" id="stat-inactive">—</div>
+          <span class="stat-card__trend" aria-hidden="true">⚠️</span>
+        </div>
+      </div>
+
+      <!-- Alert for inactive judges -->
+      <div id="inactivity-alert" class="judge-alert judge-alert--warning" role="alert" hidden style="margin-bottom:var(--space-5);">
+        <span class="judge-alert__icon" aria-hidden="true">⚠</span>
+        <div>
+          <strong id="inactivity-alert-msg">Some judges have been inactive.</strong>
+          <button type="button" class="btn btn-warning btn-sm" id="send-all-reminders" style="margin-left:var(--space-4);">Send Reminders to All Inactive</button>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div style="display:flex;gap:var(--space-3);align-items:center;margin-bottom:var(--space-5);flex-wrap:wrap;">
+        <select id="filter-progress" class="form-select" style="max-width:200px;" aria-label="Filter judges">
+          <option value="all">All Judges</option>
+          <option value="incomplete">Incomplete Only</option>
+          <option value="inactive">Inactive Only</option>
+        </select>
+        <select id="sort-progress" class="form-select" style="max-width:200px;" aria-label="Sort by">
+          <option value="pct-asc">Completion % ↑</option>
+          <option value="pct-desc">Completion % ↓</option>
+          <option value="name">Name A–Z</option>
+          <option value="activity">Last Activity</option>
+        </select>
+        <button type="button" class="btn btn-ghost btn-sm" id="refresh-btn">Refresh</button>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:var(--space-2);">
+          <label style="font-size:var(--text-sm);color:var(--color-text-muted);" for="auto-refresh-check">Auto-refresh (60s)</label>
+          <input type="checkbox" id="auto-refresh-check" checked />
+        </div>
+      </div>
+
+      <!-- Judge progress cards grid -->
+      <div id="progress-loading" style="text-align:center;padding:var(--space-10);">
+        <div class="spinner" role="status" aria-label="Loading judge progress"></div>
+      </div>
+
+      <div class="progress-grid" id="progress-grid" hidden></div>
+
+      <div id="progress-empty" class="empty-state" hidden>
+        <div class="empty-state__icon" aria-hidden="true">📈</div>
+        <h2 class="empty-state__heading">No Judges Found</h2>
+        <p class="empty-state__description">Add and invite judges to track their progress here.</p>
+        <a href="judges.html" class="btn btn-primary">Manage Judges</a>
+      </div>
+
+      <!-- Missing evaluations panel -->
+      <div id="missing-section" class="admin-card" style="margin-top:var(--space-8);" hidden>
+        <div class="admin-card__header">
+          <span class="admin-card__title">Missing Evaluations</span>
+          <div class="admin-card__actions">
+            <span style="font-size:var(--text-xs);color:var(--color-text-muted);">Presenters not yet scored by at least one judge</span>
+          </div>
+        </div>
+        <div class="admin-card__body--no-pad">
+          <table class="admin-table" id="missing-table" aria-label="Missing evaluations">
+            <thead>
+              <tr>
+                <th>Presenter</th>
+                <th>Poster #</th>
+                <th>Missing Judges</th>
+              </tr>
+            </thead>
+            <tbody id="missing-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div id="toast-container" role="region" aria-label="Notifications" aria-live="polite"></div>
+
+<script type="module">
+  import { CONFIG } from '../assets/js/config.js';
+  import { STRINGS, interpolate } from '../assets/js/i18n.js';
+  import * as api from '../assets/js/api.js';
+  import { requireAdminAuth, clearAdminSession, getAdminToken } from '../assets/js/auth.js';
+  import { showToast, showError } from '../assets/js/ui.js';
+
+  const session = requireAdminAuth();
+  if (!session) throw new Error('Redirecting…');
+
+  document.getElementById('sidebar-toggle').addEventListener('click', () => { document.getElementById('admin-sidebar').classList.toggle('is-open'); document.getElementById('sidebar-backdrop').classList.toggle('is-visible'); });
+  document.getElementById('sidebar-backdrop').addEventListener('click', () => { document.getElementById('admin-sidebar').classList.remove('is-open'); document.getElementById('sidebar-backdrop').classList.remove('is-visible'); });
+  document.getElementById('sidebar-logout').addEventListener('click', () => { clearAdminSession(); location.href = 'login.html'; });
+
+  let _progressData = [], _settings = {}, _autoRefreshInterval = null;
+
+  document.getElementById('refresh-btn').addEventListener('click', loadData);
+  document.getElementById('filter-progress').addEventListener('change', render);
+  document.getElementById('sort-progress').addEventListener('change', render);
+  document.getElementById('auto-refresh-check').addEventListener('change', function() {
+    clearInterval(_autoRefreshInterval);
+    if (this.checked) startAutoRefresh();
+  });
+  document.getElementById('send-all-reminders').addEventListener('click', async () => {
+    const r = await api.sendBulkReminders(getAdminToken());
+    if (r.success) showToast('Reminders sent.', 'success');
+    else showError(r.error || STRINGS.errors.generic);
+  });
+
+  loadData();
+  startAutoRefresh();
+
+  function startAutoRefresh() {
+    _autoRefreshInterval = setInterval(loadData, CONFIG.POLL.JUDGE_PROGRESS);
+  }
+
+  async function loadData() {
+    const [prRes, sRes] = await Promise.all([api.getAllJudgeProgress(), api.getSettings()]);
+
+    if (prRes.success) _progressData = prRes.data || [];
+    if (sRes.success) {
+      _settings = sRes.data || {};
+      document.getElementById('sidebar-event-name').textContent = _settings.eventName || '';
+      const s = _settings.votingStatus || 'paused';
+      const el = document.getElementById('topbar-status-badge');
+      el.className = `admin-voting-badge admin-voting-badge--${s}`;
+      el.innerHTML = `<span class="admin-voting-badge__dot"></span>${s.charAt(0).toUpperCase()+s.slice(1)}`;
+    }
+
+    document.getElementById('last-updated').textContent = 'Updated ' + new Date().toLocaleTimeString();
+    render();
+  }
+
+  function render() {
+    const filter = document.getElementById('filter-progress').value;
+    const sort   = document.getElementById('sort-progress').value;
+    const inactivityMin = parseInt(_settings.judgeInactivityMinutes) || CONFIG.JUDGE.INACTIVITY_ALERT_MINUTES;
+    const inactivityMs  = inactivityMin * 60 * 1000;
+
+    let list = [..._progressData];
+
+    // Filter
+    if (filter === 'incomplete') list = list.filter(j => (j.completionPct || 0) < 100);
+    if (filter === 'inactive')   list = list.filter(j => _isInactive(j.lastActivity, inactivityMs));
+
+    // Sort
+    if (sort === 'pct-asc')  list.sort((a,b) => (a.completionPct||0) - (b.completionPct||0));
+    if (sort === 'pct-desc') list.sort((a,b) => (b.completionPct||0) - (a.completionPct||0));
+    if (sort === 'name')     list.sort((a,b) => (a.judgeName||'').localeCompare(b.judgeName||''));
+    if (sort === 'activity') list.sort((a,b) => new Date(b.lastActivity||0) - new Date(a.lastActivity||0));
+
+    // Stats
+    const total    = _progressData.length;
+    const complete = _progressData.filter(j => (j.completionPct||0) >= 100).length;
+    const inactive = _progressData.filter(j => _isInactive(j.lastActivity, inactivityMs)).length;
+    const totalScores = _progressData.reduce((s, j) => s + (j.scored || 0), 0);
+
+    document.getElementById('stat-total-judges').textContent = total;
+    document.getElementById('stat-complete').textContent     = complete;
+    document.getElementById('stat-inactive').textContent     = inactive;
+    document.getElementById('stat-total-scores').textContent = totalScores;
+
+    // Inactivity alert
+    const alertEl = document.getElementById('inactivity-alert');
+    if (inactive > 0) {
+      alertEl.hidden = false;
+      document.getElementById('inactivity-alert-msg').textContent =
+        `${inactive} judge${inactive > 1 ? 's have' : ' has'} been inactive for more than ${inactivityMin} minutes.`;
+    } else {
+      alertEl.hidden = true;
+    }
+
+    // Loading/empty/grid states
+    document.getElementById('progress-loading').hidden = true;
+    if (list.length === 0) {
+      document.getElementById('progress-empty').hidden = false;
+      document.getElementById('progress-grid').hidden  = true;
+      document.getElementById('missing-section').hidden = true;
+      return;
+    }
+
+    document.getElementById('progress-empty').hidden = false;
+    const grid = document.getElementById('progress-grid');
+    grid.hidden = false;
+    grid.innerHTML = list.map(j => {
+      const pct    = Math.round(j.completionPct || 0);
+      const flagged = _isInactive(j.lastActivity, inactivityMs);
+      const lastSeen = j.lastActivity ? _relTime(j.lastActivity) : 'No activity';
+      return `
+        <div class="judge-progress-card ${flagged ? 'judge-progress-card--flagged' : ''}">
+          ${flagged ? `<span class="judge-progress-card__flag" aria-label="Inactive">⚠</span>` : ''}
+          <div class="judge-progress-card__name">${_esc(j.judgeName || j.judgeId)}</div>
+          <div class="judge-progress-card__meta">${_esc(j.judgeEmail || '')} ${j.assignedTrack ? `· ${_esc(j.assignedTrack)}` : ''}</div>
+          <div class="judge-progress-card__bar-wrap">
+            <div class="judge-progress-card__bar" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100">
+              <div class="judge-progress-card__fill" style="width:${pct}%;"></div>
+            </div>
+            <div class="judge-progress-card__fraction">
+              <span>${j.scored || 0} of ${j.total || 0} scored</span>
+              <span class="judge-progress-card__pct">${pct}%</span>
+            </div>
+          </div>
+          <div class="judge-progress-card__footer">
+            <span class="judge-progress-card__last-seen">Last seen: ${lastSeen}</span>
+            <div style="display:flex;gap:var(--space-2);">
+              <button type="button" class="btn btn-ghost btn-sm" data-remind="${_esc(j.judgeId)}" data-name="${_esc(j.judgeName)}">Remind</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    grid.querySelectorAll('[data-remind]').forEach(btn => btn.addEventListener('click', async () => {
+      const r = await api.sendReminder(btn.dataset.remind, getAdminToken());
+      if (r.success) showToast(interpolate(STRINGS.success.reminderSent, { name: btn.dataset.name }), 'success');
+      else showError(r.error);
+    }));
+
+    // Missing evaluations
+    renderMissingTable(inactivityMs);
+  }
+
+  function renderMissingTable(inactivityMs) {
+    const missingMap = {};
+    for (const j of _progressData) {
+      if (Array.isArray(j.unscoredPresenters)) {
+        j.unscoredPresenters.forEach(p => {
+          if (!missingMap[p.id]) missingMap[p.id] = { name: p.name, poster: p.posterNumber, judges: [] };
+          missingMap[p.id].judges.push(j.judgeName || j.judgeId);
+        });
+      }
+    }
+
+    const rows = Object.values(missingMap);
+    const section = document.getElementById('missing-section');
+    section.hidden = rows.length === 0;
+    if (rows.length === 0) return;
+
+    document.getElementById('missing-tbody').innerHTML = rows.map(r => `
+      <tr>
+        <td style="font-weight:600;">${_esc(r.name)}</td>
+        <td><span style="font-family:var(--font-mono);font-size:var(--text-xs);">${_esc(r.poster || '—')}</span></td>
+        <td style="font-size:var(--text-xs);color:var(--color-text-muted);">${r.judges.map(j => _esc(j)).join(', ')}</td>
+      </tr>
+    `).join('');
+  }
+
+  function _isInactive(lastActivity, thresholdMs) {
+    if (!lastActivity) return false;
+    return (Date.now() - new Date(lastActivity).getTime()) > thresholdMs;
+  }
+
+  function _relTime(ts) {
+    const diff = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
+    return Math.floor(diff/86400) + 'd ago';
+  }
+
+  function _esc(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+</script>
+</body>
+</html>

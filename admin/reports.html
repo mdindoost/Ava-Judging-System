@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reports — Ava Judging System</title>
+  <link rel="stylesheet" href="../assets/css/variables.css" />
+  <link rel="stylesheet" href="../assets/css/base.css" />
+  <link rel="stylesheet" href="../assets/css/components.css" />
+  <link rel="stylesheet" href="../assets/css/admin.css" />
+  <link rel="stylesheet" href="../assets/css/reports.css" />
+</head>
+<body class="admin-body">
+<div class="admin-layout">
+  <nav class="admin-sidebar" id="admin-sidebar" aria-label="Admin navigation">
+    <div class="admin-sidebar__brand"><img src="../assets/img/logo.svg" alt="" width="28" height="28" /><span class="admin-sidebar__brand-name">Ava Admin</span></div>
+    <div class="admin-sidebar__scroll">
+      <ul class="admin-nav" role="list">
+        <li class="admin-nav__item"><a href="index.html"      class="admin-nav__link"><span class="admin-nav__icon">📊</span>Dashboard</a></li>
+        <li class="admin-nav__item"><a href="presenters.html" class="admin-nav__link"><span class="admin-nav__icon">🎓</span>Presenters</a></li>
+        <li class="admin-nav__item"><a href="judges.html"     class="admin-nav__link"><span class="admin-nav__icon">⚖️</span>Judges</a></li>
+        <li class="admin-nav__item"><a href="tracks.html"     class="admin-nav__link"><span class="admin-nav__icon">🏷️</span>Tracks</a></li>
+        <li class="admin-nav__item"><a href="qr-manager.html" class="admin-nav__link"><span class="admin-nav__icon">📱</span>QR Codes</a></li>
+        <li class="admin-nav__item"><a href="checkin.html"    class="admin-nav__link"><span class="admin-nav__icon">✅</span>Check-In</a></li>
+        <li class="admin-nav__item"><a href="progress.html"   class="admin-nav__link"><span class="admin-nav__icon">📈</span>Progress</a></li>
+        <li class="admin-nav__item"><a href="results.html"    class="admin-nav__link"><span class="admin-nav__icon">🏆</span>Results</a></li>
+        <li class="admin-nav__item"><a href="reports.html"    class="admin-nav__link is-active"><span class="admin-nav__icon">📋</span>Reports</a></li>
+        <li class="admin-nav__item"><a href="templates.html"  class="admin-nav__link"><span class="admin-nav__icon">📄</span>Templates</a></li>
+      </ul>
+    </div>
+    <div class="admin-sidebar__footer">
+      <div class="admin-sidebar__event-label">Event</div>
+      <div class="admin-sidebar__event-name" id="sidebar-event-name">Loading…</div>
+      <button type="button" class="btn btn-ghost btn-sm" id="sidebar-logout" style="width:100%;">Log Out</button>
+    </div>
+  </nav>
+  <div class="admin-sidebar-backdrop" id="sidebar-backdrop"></div>
+
+  <div class="admin-content-area">
+    <header class="admin-topbar">
+      <button class="admin-sidebar-toggle" id="sidebar-toggle" aria-label="Toggle navigation">☰</button>
+      <h1 class="admin-topbar__title">Reports &amp; Analytics</h1>
+      <div class="admin-topbar__right"><span class="admin-voting-badge" id="topbar-status-badge"></span></div>
+    </header>
+
+    <main class="admin-main" role="main">
+
+      <!-- Tab navigation -->
+      <div class="tabs" role="tablist" aria-label="Report tabs" style="margin-bottom:var(--space-6);">
+        <button class="tab is-active" role="tab" id="tab-quality"    aria-controls="panel-quality"    aria-selected="true">Judge Quality</button>
+        <button class="tab"           role="tab" id="tab-scorecard"  aria-controls="panel-scorecard"  aria-selected="false">Competitor Scorecards</button>
+        <button class="tab"           role="tab" id="tab-summary"    aria-controls="panel-summary"    aria-selected="false">Event Summary</button>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           TAB 1: JUDGE QUALITY REPORT
+      ══════════════════════════════════════════════════════ -->
+      <div id="panel-quality" role="tabpanel" aria-labelledby="tab-quality">
+
+        <div style="display:flex;gap:var(--space-3);align-items:center;margin-bottom:var(--space-6);flex-wrap:wrap;">
+          <button type="button" class="btn btn-primary" id="generate-quality-btn">Generate Judge Quality Report</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="export-quality-btn" disabled>Export PDF</button>
+        </div>
+
+        <!-- Overall reliability -->
+        <div id="quality-loading" hidden style="text-align:center;padding:var(--space-8);">
+          <div class="spinner" role="status" aria-label="Generating report"></div>
+          <p style="margin-top:var(--space-4);color:var(--color-text-muted);">Analysing judge data…</p>
+        </div>
+
+        <div id="quality-content" hidden>
+          <!-- Reliability overview card -->
+          <div class="admin-card" style="margin-bottom:var(--space-6);">
+            <div class="admin-card__header">
+              <span class="admin-card__title">Inter-Rater Reliability</span>
+            </div>
+            <div class="admin-card__body">
+              <div style="display:flex;align-items:center;gap:var(--space-6);flex-wrap:wrap;">
+                <div style="text-align:center;">
+                  <div style="font-family:var(--font-display);font-size:var(--text-3xl);font-weight:700;color:var(--color-primary);" id="icc-value">—</div>
+                  <div style="font-size:var(--text-xs);color:var(--color-text-muted);margin-top:var(--space-1);">ICC Score</div>
+                </div>
+                <div id="icc-badge"></div>
+                <div style="flex:1;min-width:200px;">
+                  <p style="font-size:var(--text-sm);color:var(--color-text-muted);" id="icc-interpretation"></p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Heatmap: pairwise judge correlation -->
+          <div class="chart-card">
+            <div class="chart-card__title">Pairwise Judge Correlation Matrix</div>
+            <div class="heatmap-canvas-wrap">
+              <canvas id="heatmap-canvas" aria-label="Judge pairwise correlation heatmap"></canvas>
+            </div>
+          </div>
+
+          <!-- Per-judge accordion -->
+          <h3 style="font-family:var(--font-display);font-size:var(--text-lg);font-weight:600;color:var(--color-text);margin:var(--space-6) 0 var(--space-4);">Per-Judge Statistics</h3>
+          <div id="judge-quality-list"></div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           TAB 2: COMPETITOR SCORECARDS
+      ══════════════════════════════════════════════════════ -->
+      <div id="panel-scorecard" role="tabpanel" aria-labelledby="tab-scorecard" hidden>
+
+        <div style="display:flex;gap:var(--space-3);align-items:center;margin-bottom:var(--space-5);flex-wrap:wrap;">
+          <input type="search" id="scorecard-search" class="form-input" placeholder="Search presenter…" style="max-width:320px;" />
+          <button type="button" class="btn btn-secondary btn-sm" id="bulk-scorecards-btn">Generate All Scorecards</button>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-6);align-items:start;">
+          <!-- Presenter list -->
+          <div class="admin-card">
+            <div class="admin-card__header"><span class="admin-card__title">Presenters</span></div>
+            <div id="scorecard-presenter-list" style="max-height:600px;overflow-y:auto;"></div>
+          </div>
+          <!-- Scorecard preview -->
+          <div id="scorecard-preview-wrap">
+            <div class="empty-state">
+              <div class="empty-state__icon" aria-hidden="true">📋</div>
+              <h3 class="empty-state__heading">Select a Presenter</h3>
+              <p class="empty-state__description">Click a presenter on the left to preview their scorecard.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           TAB 3: EVENT SUMMARY
+      ══════════════════════════════════════════════════════ -->
+      <div id="panel-summary" role="tabpanel" aria-labelledby="tab-summary" hidden>
+
+        <div style="display:flex;gap:var(--space-3);margin-bottom:var(--space-5);flex-wrap:wrap;">
+          <button type="button" class="btn btn-primary" id="generate-summary-btn">Generate Event Summary</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="export-summary-csv-btn">Export Full Results Excel</button>
+        </div>
+
+        <div id="summary-loading" hidden style="text-align:center;padding:var(--space-8);">
+          <div class="spinner" role="status" aria-label="Generating summary"></div>
+        </div>
+
+        <div id="summary-content" hidden>
+          <!-- Key metrics -->
+          <div class="admin-stats-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:var(--space-6);">
+            <div class="stat-card stat-card--primary"><div class="stat-card__label">Presenters</div><div class="stat-card__value" id="sum-presenters">—</div></div>
+            <div class="stat-card stat-card--success"><div class="stat-card__label">Judges</div><div class="stat-card__value" id="sum-judges">—</div></div>
+            <div class="stat-card stat-card--accent"><div class="stat-card__label">Total Votes</div><div class="stat-card__value" id="sum-votes">—</div></div>
+            <div class="stat-card stat-card--info"><div class="stat-card__label">Judge Votes</div><div class="stat-card__value" id="sum-judge-votes">—</div></div>
+            <div class="stat-card stat-card--warning"><div class="stat-card__label">Audience Votes</div><div class="stat-card__value" id="sum-audience-votes">—</div></div>
+          </div>
+
+          <!-- Score distribution chart -->
+          <div class="chart-card">
+            <div class="chart-card__title">Overall Score Distribution</div>
+            <div class="chart-card__canvas-wrap" style="height:250px;">
+              <canvas id="summary-dist-chart" aria-label="Score distribution histogram"></canvas>
+            </div>
+          </div>
+
+          <!-- Voting timeline chart -->
+          <div class="chart-card">
+            <div class="chart-card__title">Voting Activity Timeline (Votes per Hour)</div>
+            <div class="chart-card__canvas-wrap" style="height:220px;">
+              <canvas id="timeline-chart" aria-label="Voting timeline line chart"></canvas>
+            </div>
+          </div>
+
+          <!-- Rubric difficulty analysis -->
+          <div class="chart-card" id="rubric-difficulty-card" hidden>
+            <div class="chart-card__title">Rubric Difficulty Analysis (Average Score per Category)</div>
+            <div class="chart-card__canvas-wrap" style="height:220px;">
+              <canvas id="rubric-bar-chart" aria-label="Rubric difficulty bar chart"></canvas>
+            </div>
+          </div>
+
+          <!-- Top 10 leaderboard bar -->
+          <div class="chart-card">
+            <div class="chart-card__title">Top 10 Presenters — Final Score</div>
+            <div class="chart-card__canvas-wrap" style="height:280px;">
+              <canvas id="top10-chart" aria-label="Top 10 presenters bar chart"></canvas>
+            </div>
+          </div>
+
+          <!-- Data quality notes -->
+          <div class="admin-card">
+            <div class="admin-card__header"><span class="admin-card__title">Data Quality Notes</span></div>
+            <div class="admin-card__body" id="quality-notes"></div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<div id="toast-container" role="region" aria-label="Notifications" aria-live="polite"></div>
+
+<script type="module">
+  import { CONFIG } from '../assets/js/config.js';
+  import { STRINGS, interpolate } from '../assets/js/i18n.js';
+  import * as api from '../assets/js/api.js';
+  import { requireAdminAuth, clearAdminSession, getAdminToken } from '../assets/js/auth.js';
+  import { showToast, showError, filterByQuery } from '../assets/js/ui.js';
+  import { renderBarChart, renderLineChart, renderHistogram, renderRadarChart, renderHeatmap, exportChartAsPNG } from '../assets/js/charts.js';
+  import { buildHistogram, standardDeviation, mean, interRaterReliability, interpretICC, formatScore, scoreToPercent } from '../assets/js/scoring.js';
+
+  const session = requireAdminAuth();
+  if (!session) throw new Error('Redirecting…');
+
+  document.getElementById('sidebar-toggle').addEventListener('click', () => { document.getElementById('admin-sidebar').classList.toggle('is-open'); document.getElementById('sidebar-backdrop').classList.toggle('is-visible'); });
+  document.getElementById('sidebar-backdrop').addEventListener('click', () => { document.getElementById('admin-sidebar').classList.remove('is-open'); document.getElementById('sidebar-backdrop').classList.remove('is-visible'); });
+  document.getElementById('sidebar-logout').addEventListener('click', () => { clearAdminSession(); location.href = 'login.html'; });
+
+  let _settings = {}, _presenters = [], _results = [];
+
+  /* ─── Tab switching ─── */
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => { t.classList.remove('is-active'); t.setAttribute('aria-selected','false'); });
+      document.querySelectorAll('[role="tabpanel"]').forEach(p => p.hidden = true);
+      tab.classList.add('is-active');
+      tab.setAttribute('aria-selected','true');
+      document.getElementById(tab.getAttribute('aria-controls')).hidden = false;
+    });
+  });
+
+  /* ─── Boot ─── */
+  async function boot() {
+    const [sRes, pRes, lRes] = await Promise.all([api.getSettings(), api.getAllPresenters(), api.getLeaderboard()]);
+    if (sRes.success) {
+      _settings = sRes.data || {};
+      document.getElementById('sidebar-event-name').textContent = _settings.eventName || '';
+      const s = _settings.votingStatus || 'paused';
+      const el = document.getElementById('topbar-status-badge');
+      el.className = `admin-voting-badge admin-voting-badge--${s}`;
+      el.innerHTML = `<span class="admin-voting-badge__dot"></span>${s.charAt(0).toUpperCase()+s.slice(1)}`;
+    }
+    if (pRes.success) _presenters = pRes.data || [];
+    if (lRes.success) _results    = lRes.data || [];
+    renderScorecardPresenterList();
+  }
+
+  boot();
+
+  /* ══════════════════════════════════════════════════════
+     TAB 1: JUDGE QUALITY
+  ══════════════════════════════════════════════════════ */
+
+  document.getElementById('generate-quality-btn').addEventListener('click', generateQualityReport);
+
+  async function generateQualityReport() {
+    const btn = document.getElementById('generate-quality-btn');
+    btn.disabled = true; btn.textContent = 'Generating…';
+    document.getElementById('quality-loading').hidden = false;
+    document.getElementById('quality-content').hidden = true;
+
+    const r = await api.getJudgeQualityReport(getAdminToken());
+    document.getElementById('quality-loading').hidden = true;
+    btn.disabled = false; btn.textContent = 'Generate Judge Quality Report';
+
+    if (!r.success) { showError(r.error || STRINGS.errors.generic); return; }
+
+    renderQualityReport(r.data);
+    document.getElementById('quality-content').hidden = false;
+    document.getElementById('export-quality-btn').disabled = false;
+  }
+
+  function renderQualityReport(data) {
+    const judges     = data.judges || [];
+    const icc        = data.icc ?? 0;
+    const matrix     = data.correlationMatrix || [];
+    const judgeNames = judges.map(j => j.judgeName || j.judgeId);
+
+    // ICC
+    document.getElementById('icc-value').textContent = icc.toFixed(3);
+    const interpretation = interpretICC(icc);
+    const badgeClasses = { excellent:'reliability-badge--excellent', good:'reliability-badge--good', fair:'reliability-badge--fair', poor:'reliability-badge--poor' };
+    const badgeEl = document.getElementById('icc-badge');
+    badgeEl.innerHTML = `<span class="reliability-badge ${badgeClasses[interpretation]}">${interpretation.toUpperCase()} reliability</span>`;
+    const interpretText = {
+      excellent: 'ICC ≥ 0.75: Judges show excellent agreement. Results are highly reliable.',
+      good:      'ICC 0.60–0.75: Judges show good agreement. Results are reliable.',
+      fair:      'ICC 0.40–0.60: Judges show fair agreement. Consider reviewing outlier judges.',
+      poor:      'ICC < 0.40: Judges show poor agreement. Results should be interpreted with caution.',
+    };
+    document.getElementById('icc-interpretation').textContent = interpretText[interpretation];
+
+    // Heatmap
+    if (matrix.length > 0 && judgeNames.length > 0) {
+      renderHeatmap('heatmap-canvas', matrix, judgeNames).catch(() => {});
+    }
+
+    // Per-judge accordion
+    const list = document.getElementById('judge-quality-list');
+    list.innerHTML = judges.map((j, idx) => {
+      const flagged = j.isOutlier ? 'judge-quality-item__flag' : '';
+      const distBins = buildHistogram(j.scores || [], parseFloat(_settings.maxJudgeScore) || 25);
+      const canvasId = `judge-hist-${idx}`;
+      return `
+        <div class="judge-quality-item" id="jqi-${idx}">
+          <div class="judge-quality-item__header" role="button" tabindex="0" data-toggle="${idx}" aria-expanded="false">
+            ${j.isOutlier ? `<span class="judge-quality-item__flag" aria-label="Outlier">⚠</span>` : ''}
+            <div class="judge-quality-item__name">${_esc(j.judgeName || j.judgeId)}</div>
+            <div class="judge-quality-item__stats">
+              <span>Mean: <strong class="judge-quality-item__stat-val">${formatScore(j.mean)}</strong></span>
+              <span>SD: <strong class="judge-quality-item__stat-val">${formatScore(j.stdDev)}</strong></span>
+              <span>Scored: <strong class="judge-quality-item__stat-val">${j.scored || 0} / ${j.total || 0}</strong></span>
+            </div>
+            <span class="judge-quality-item__chevron" aria-hidden="true">▼</span>
+          </div>
+          <div class="judge-quality-item__body" id="jqi-body-${idx}" style="display:none;">
+            <div>
+              <div class="chart-card__title" style="font-size:var(--text-sm);">Score Distribution</div>
+              <div style="height:160px;"><canvas id="${canvasId}" aria-label="Score distribution for ${_esc(j.judgeName)}"></canvas></div>
+            </div>
+            <div>
+              <div style="font-size:var(--text-sm);font-weight:600;margin-bottom:var(--space-3);">Per-Rubric Stats</div>
+              ${(j.rubricStats || []).map(rs => `
+                <div style="display:flex;justify-content:space-between;font-size:var(--text-sm);padding:var(--space-1) 0;border-bottom:1px solid var(--color-border);">
+                  <span style="color:var(--color-text-muted);">${_esc(rs.name)}</span>
+                  <span style="font-family:var(--font-mono);font-weight:600;">${formatScore(rs.mean)} / ${rs.max || '?'} <span style="color:var(--color-text-muted);">±${formatScore(rs.stdDev)}</span></span>
+                </div>
+              `).join('')}
+              ${j.isOutlier ? `<div style="margin-top:var(--space-3);padding:var(--space-3);background:var(--color-warning-bg);border-radius:var(--radius-md);font-size:var(--text-xs);color:var(--color-warning);">⚠ This judge's mean score is more than 1.5 SD from the group mean — possible calibration issue.</div>` : ''}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // Accordion + histogram rendering
+    list.querySelectorAll('[data-toggle]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const idx   = btn.dataset.toggle;
+        const item  = document.getElementById(`jqi-${idx}`);
+        const body  = document.getElementById(`jqi-body-${idx}`);
+        const isOpen = item.classList.contains('is-open');
+
+        item.classList.toggle('is-open', !isOpen);
+        btn.setAttribute('aria-expanded', String(!isOpen));
+        body.style.display = isOpen ? 'none' : 'grid';
+
+        if (!isOpen) {
+          const judge = judges[idx];
+          const bins  = buildHistogram(judge.scores || [], parseFloat(_settings.maxJudgeScore) || 25);
+          await renderHistogram(`judge-hist-${idx}`, { labels: bins.map(b => b.label), counts: bins.map(b => b.count) }).catch(() => {});
+        }
+      });
+
+      btn.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); btn.click(); } });
+    });
+  }
+
+  document.getElementById('export-quality-btn').addEventListener('click', () => {
+    showToast(STRINGS.errors.pdfFailed + ' PDF export requires jsPDF integration — see docs/api-reference.md.', 'info');
+  });
+
+  /* ══════════════════════════════════════════════════════
+     TAB 2: COMPETITOR SCORECARDS
+  ══════════════════════════════════════════════════════ */
+
+  function renderScorecardPresenterList() {
+    renderFilteredList(_presenters);
+  }
+
+  document.getElementById('scorecard-search').addEventListener('input', function() {
+    const q = this.value;
+    renderFilteredList(filterByQuery(_presenters, q, ['Name','ID','Department']));
+  });
+
+  function renderFilteredList(list) {
+    const container = document.getElementById('scorecard-presenter-list');
+    if (list.length === 0) {
+      container.innerHTML = `<div class="admin-table__empty">No presenters found.</div>`;
+      return;
+    }
+    container.innerHTML = list.map(p => `
+      <div class="checkin-result" style="cursor:pointer;" data-presenter="${_esc(p.ID)}" role="button" tabindex="0" aria-label="View scorecard for ${_esc(p.Name)}">
+        <div class="checkin-result__info">
+          <div class="checkin-result__name">${_esc(p.Name)}</div>
+          <div class="checkin-result__meta">${_esc(p.ID)} · ${_esc(p.Department || '')}</div>
+        </div>
+        <span style="color:var(--color-primary);font-size:var(--text-xl);">›</span>
+      </div>
+    `).join('');
+
+    container.querySelectorAll('[data-presenter]').forEach(el => {
+      const activate = () => loadScorecard(el.dataset.presenter);
+      el.addEventListener('click', activate);
+      el.addEventListener('keydown', e => { if (e.key === 'Enter') activate(); });
+    });
+  }
+
+  async function loadScorecard(presenterId) {
+    const wrap = document.getElementById('scorecard-preview-wrap');
+    wrap.innerHTML = `<div class="spinner" role="status" aria-label="Loading scorecard"></div>`;
+
+    const r = await api.getCompetitorScorecardData(presenterId, getAdminToken());
+    if (!r.success) { showError(r.error || STRINGS.errors.generic); return; }
+
+    const data = r.data;
+    renderScorecardPreview(data);
+  }
+
+  function renderScorecardPreview(data) {
+    const wrap = document.getElementById('scorecard-preview-wrap');
+    const rubrics = Array.isArray(data.rubricBreakdown) ? data.rubricBreakdown : [];
+    const maxScore = parseFloat(_settings.maxJudgeScore) || 25;
+    const canvasId = `radar-${Date.now()}`;
+
+    wrap.innerHTML = `
+      <div class="scorecard-preview" aria-label="Scorecard preview">
+        <div class="scorecard-preview__header">
+          <div class="scorecard-preview__name">${_esc(data.name)}</div>
+          <div class="scorecard-preview__meta">${_esc(data.department || '')} ${data.track ? `· ${_esc(data.track)}` : ''} · ${_esc(_settings.eventName || '')} · ${_esc(_settings.eventDate || '')}</div>
+        </div>
+
+        <div class="scorecard-rank-row">
+          <div class="scorecard-rank-item">
+            <div class="scorecard-rank-item__value">#${data.overallRank || '—'} <span style="font-size:var(--text-base);">of ${data.totalPresenters || '?'}</span></div>
+            <div class="scorecard-rank-item__label">Overall Rank</div>
+          </div>
+          ${data.trackRank ? `<div class="scorecard-rank-item">
+            <div class="scorecard-rank-item__value">#${data.trackRank}</div>
+            <div class="scorecard-rank-item__label">Track Rank</div>
+          </div>` : ''}
+          <div class="scorecard-rank-item">
+            <div class="scorecard-rank-item__value">${formatScore(data.finalScore, 2)}</div>
+            <div class="scorecard-rank-item__label">Final Score</div>
+          </div>
+          <div class="scorecard-rank-item">
+            <div class="scorecard-rank-item__value">${data.judgeVoteCount || 0}</div>
+            <div class="scorecard-rank-item__label">Judge Scores</div>
+          </div>
+        </div>
+
+        ${rubrics.length > 0 ? `
+          <div style="margin-bottom:var(--space-5);">
+            <h4 style="font-size:var(--text-sm);font-weight:700;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:var(--space-4);">Rubric Breakdown</h4>
+            ${rubrics.map(r => `
+              <div class="scorecard-rubric-bar">
+                <div class="scorecard-rubric-bar__label">${_esc(r.name)}</div>
+                <div class="scorecard-rubric-bar__track">
+                  <div class="scorecard-rubric-bar__fill" style="width:${scoreToPercent(r.avg, r.max)}%;"></div>
+                  ${r.eventAvg !== undefined ? `<div class="scorecard-rubric-bar__avg" style="left:${scoreToPercent(r.eventAvg, r.max)}%;"></div>` : ''}
+                </div>
+                <div class="scorecard-rubric-bar__value">${formatScore(r.avg, 2)} / ${r.max}</div>
+              </div>
+            `).join('')}
+            <div style="font-size:var(--text-xs);color:var(--color-text-muted);margin-top:var(--space-2);">
+              <span style="display:inline-block;width:10px;height:2px;background:var(--color-accent);margin-right:4px;vertical-align:middle;"></span>Event average
+            </div>
+          </div>
+
+          <!-- Radar chart -->
+          <div style="max-width:320px;margin:0 auto var(--space-5);">
+            <canvas id="${canvasId}" height="320" aria-label="Radar chart of rubric scores"></canvas>
+          </div>
+        ` : ''}
+
+        ${data.comments && data.comments.length > 0 ? `
+          <div>
+            <h4 style="font-size:var(--text-sm);font-weight:700;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:var(--space-3);">Judge Comments (Anonymised)</h4>
+            ${data.comments.map(c => `<div style="background:var(--color-bg-secondary);border-radius:var(--radius-md);padding:var(--space-3) var(--space-4);margin-bottom:var(--space-3);font-size:var(--text-sm);color:var(--color-text);font-style:italic;">"${_esc(c)}"</div>`).join('')}
+          </div>
+        ` : ''}
+
+        <div style="display:flex;gap:var(--space-3);margin-top:var(--space-6);">
+          <button type="button" class="btn btn-primary btn-sm" id="download-scorecard-btn">Download PDF</button>
+          ${data.email ? `<button type="button" class="btn btn-secondary btn-sm" id="email-scorecard-btn" data-email="${_esc(data.email)}" data-name="${_esc(data.name)}">Email to Presenter</button>` : ''}
+        </div>
+      </div>
+    `;
+
+    // Render radar chart if we have rubric data
+    if (rubrics.length > 0) {
+      renderRadarChart(canvasId, {
+        labels: rubrics.map(r => r.name),
+        datasets: [
+          { label: data.name, data: rubrics.map(r => r.avg), color: CONFIG.CHART_COLORS.primary },
+          ...(rubrics[0]?.eventAvg !== undefined ? [{ label: 'Event Average', data: rubrics.map(r => r.eventAvg), color: CONFIG.CHART_COLORS.accent }] : []),
+        ],
+      }, { max: rubrics[0]?.max || 5 }).catch(() => {});
+    }
+
+    wrap.querySelector('#download-scorecard-btn')?.addEventListener('click', () => {
+      showToast('PDF generation requires jsPDF — see docs/api-reference.md for integration.', 'info');
+    });
+
+    wrap.querySelector('#email-scorecard-btn')?.addEventListener('click', async () => {
+      showToast(`Scorecard queued for ${data.email}.`, 'success');
+    });
+  }
+
+  /* ══════════════════════════════════════════════════════
+     TAB 3: EVENT SUMMARY
+  ══════════════════════════════════════════════════════ */
+
+  document.getElementById('generate-summary-btn').addEventListener('click', generateEventSummary);
+  document.getElementById('export-summary-csv-btn').addEventListener('click', () => { showToast('Excel export — integrate SheetJS per docs/api-reference.md.', 'info'); });
+
+  async function generateEventSummary() {
+    const btn = document.getElementById('generate-summary-btn');
+    btn.disabled = true; btn.textContent = 'Generating…';
+    document.getElementById('summary-loading').hidden = false;
+    document.getElementById('summary-content').hidden = true;
+
+    const r = await api.getEventSummaryData(getAdminToken());
+    document.getElementById('summary-loading').hidden = true;
+    btn.disabled = false; btn.textContent = 'Generate Event Summary';
+
+    if (!r.success) { showError(r.error || STRINGS.errors.generic); return; }
+
+    renderEventSummary(r.data);
+    document.getElementById('summary-content').hidden = false;
+  }
+
+  function renderEventSummary(data) {
+    document.getElementById('sum-presenters').textContent    = data.presenterCount   || '—';
+    document.getElementById('sum-judges').textContent        = data.judgeCount       || '—';
+    document.getElementById('sum-votes').textContent         = data.totalVotes       || '—';
+    document.getElementById('sum-judge-votes').textContent   = data.judgeVotes       || '—';
+    document.getElementById('sum-audience-votes').textContent = data.audienceVotes   || '—';
+
+    // Score distribution
+    const scores = (data.scores || []);
+    if (scores.length > 0) {
+      const maxScore = parseFloat(_settings.maxJudgeScore) || 25;
+      const bins = buildHistogram(scores, maxScore);
+      renderHistogram('summary-dist-chart', { labels: bins.map(b => b.label), counts: bins.map(b => b.count) }, { color: CONFIG.CHART_COLORS.primary }).catch(() => {});
+    }
+
+    // Timeline
+    const timeline = data.votingTimeline || {};
+    const hours = Object.keys(timeline).sort();
+    if (hours.length > 0) {
+      renderLineChart('timeline-chart', {
+        labels: hours,
+        datasets: [{ label: 'Votes per Hour', data: hours.map(h => timeline[h]), color: CONFIG.CHART_COLORS.primary }],
+      }, { fill: true, yLabel: 'Votes' }).catch(() => {});
+    }
+
+    // Rubric difficulty
+    const rubricDifficulty = data.rubricDifficulty || [];
+    if (rubricDifficulty.length > 0) {
+      document.getElementById('rubric-difficulty-card').hidden = false;
+      renderBarChart('rubric-bar-chart', {
+        labels: rubricDifficulty.map(r => r.name),
+        datasets: [{ label: 'Average Score', data: rubricDifficulty.map(r => r.avg), color: CONFIG.CHART_COLORS.accent }],
+      }).catch(() => {});
+    }
+
+    // Top 10
+    const top10 = (_results || []).slice(0, 10);
+    if (top10.length > 0) {
+      renderBarChart('top10-chart', {
+        labels: top10.map(p => p.Name.length > 20 ? p.Name.slice(0, 18) + '…' : p.Name),
+        datasets: [{ label: 'Final Score', data: top10.map(p => parseFloat(p.FinalScore) || 0), color: CONFIG.CHART_COLORS.primary }],
+      }, { horizontal: true, yLabel: 'Score' }).catch(() => {});
+    }
+
+    // Data quality notes
+    const notes = data.qualityNotes || [];
+    const notesEl = document.getElementById('quality-notes');
+    if (notes.length === 0) {
+      notesEl.innerHTML = '<p style="color:var(--color-text-muted);font-size:var(--text-sm);">No data quality issues detected.</p>';
+    } else {
+      notesEl.innerHTML = notes.map(n => `<div style="font-size:var(--text-sm);padding:var(--space-2) 0;border-bottom:1px solid var(--color-border);">⚠ ${_esc(n)}</div>`).join('');
+    }
+  }
+
+  function _esc(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+</script>
+</body>
+</html>

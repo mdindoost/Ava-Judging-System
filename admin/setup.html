@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Competition Setup — Ava Judging System</title>
+  <link rel="stylesheet" href="../assets/css/variables.css" />
+  <link rel="stylesheet" href="../assets/css/base.css" />
+  <link rel="stylesheet" href="../assets/css/components.css" />
+  <link rel="stylesheet" href="../assets/css/admin.css" />
+  <style>
+    /* Inline toggle switch */
+    .toggle-row { display:flex; align-items:center; justify-content:space-between; padding:var(--space-3) 0; border-bottom:1px solid var(--color-border); }
+    .toggle-row:last-child { border-bottom:none; }
+    .toggle-label { font-size:var(--text-sm); font-weight:var(--font-weight-semibold); color:var(--color-text); }
+    .toggle-desc  { font-size:var(--text-xs); color:var(--color-text-muted); margin-top:var(--space-0-5); }
+    .toggle { position:relative; width:44px; height:24px; flex-shrink:0; }
+    .toggle input { opacity:0; width:0; height:0; }
+    .toggle-slider { position:absolute; inset:0; background:var(--color-border); border-radius:var(--radius-full); cursor:pointer; transition:background var(--transition-fast); }
+    .toggle-slider::before { content:''; position:absolute; width:18px; height:18px; background:#fff; border-radius:50%; top:3px; left:3px; transition:transform var(--transition-fast); box-shadow:var(--shadow-sm); }
+    .toggle input:checked + .toggle-slider { background:var(--color-primary); }
+    .toggle input:checked + .toggle-slider::before { transform:translateX(20px); }
+    .toggle input:focus-visible + .toggle-slider { box-shadow:var(--shadow-focus); }
+    /* Review items */
+    .review-section { margin-bottom:var(--space-5); }
+    .review-section__title { font-size:var(--text-xs); font-weight:var(--font-weight-semibold); text-transform:uppercase; letter-spacing:var(--tracking-wider); color:var(--color-text-muted); margin-bottom:var(--space-3); }
+    .review-row { display:flex; justify-content:space-between; font-size:var(--text-sm); padding:var(--space-2) 0; border-bottom:1px solid var(--color-border); }
+    .review-row:last-child { border-bottom:none; }
+    .review-val { font-weight:var(--font-weight-semibold); color:var(--color-primary); }
+    /* Connection test */
+    .conn-result { border-radius:var(--radius-md); padding:var(--space-3) var(--space-4); font-size:var(--text-sm); margin-top:var(--space-3); display:none; }
+    .conn-result.ok { background:var(--color-success-bg); color:var(--color-success); border:1px solid var(--color-success-light); }
+    .conn-result.fail { background:var(--color-danger-bg); color:var(--color-danger); border:1px solid var(--color-danger-light); }
+  </style>
+</head>
+<body>
+
+<div class="wizard-layout">
+  <!-- Topbar -->
+  <header class="wizard-topbar" role="banner">
+    <img src="../assets/img/logo.svg" alt="" width="28" height="28" />
+    <div class="wizard-topbar__title">Competition Setup Wizard</div>
+    <a href="login.html" class="btn-judge-logout" style="margin-left:auto;color:rgba(255,255,255,0.7);border-color:rgba(255,255,255,0.25);">Cancel</a>
+  </header>
+
+  <main class="wizard-body" role="main">
+    <!-- Step Indicator -->
+    <nav class="wizard-steps" aria-label="Setup steps" id="step-indicator">
+      <div class="wizard-step is-active" data-step="1"><div class="wizard-step__circle">1</div><div class="wizard-step__label">Event Basics</div></div>
+      <div class="wizard-step" data-step="2"><div class="wizard-step__circle">2</div><div class="wizard-step__label">Scoring</div></div>
+      <div class="wizard-step" data-step="3"><div class="wizard-step__circle">3</div><div class="wizard-step__label">Options</div></div>
+      <div class="wizard-step" data-step="4"><div class="wizard-step__circle">4</div><div class="wizard-step__label">Admin</div></div>
+      <div class="wizard-step" data-step="5"><div class="wizard-step__circle">5</div><div class="wizard-step__label">Review</div></div>
+    </nav>
+
+    <!-- ════ STEP 1: EVENT BASICS ════ -->
+    <div class="wizard-panel" id="step-1">
+      <div class="wizard-panel__header">
+        <h2 class="wizard-panel__title">Event Basics</h2>
+        <p class="wizard-panel__subtitle">Name your competition and connect to the backend.</p>
+      </div>
+      <div class="wizard-panel__body">
+        <div class="form-group"><label class="form-label" for="s1-event-name">Event Name <span aria-hidden="true">*</span></label>
+          <input type="text" id="s1-event-name" class="form-input" name="eventName" placeholder="NJIT PhD Symposium 2026" required maxlength="100" />
+          <div class="form-hint">The name shown to judges and on the leaderboard.</div>
+        </div>
+        <div class="form-group"><label class="form-label" for="s1-event-date">Event Date <span aria-hidden="true">*</span></label>
+          <input type="date" id="s1-event-date" name="eventDate" class="form-input" required />
+        </div>
+        <div class="form-group"><label class="form-label" for="s1-event-desc">Description</label>
+          <textarea id="s1-event-desc" name="eventDescription" class="form-textarea" rows="2" maxlength="300" placeholder="Brief description of the event…"></textarea>
+        </div>
+        <hr style="border:none;border-top:1px solid var(--color-border);margin:var(--space-6) 0;" />
+        <div class="form-group">
+          <label class="form-label" for="s1-script-url">Google Apps Script URL <span aria-hidden="true">*</span></label>
+          <input type="url" id="s1-script-url" name="scriptURL" class="form-input" placeholder="https://script.google.com/macros/s/…/exec" required />
+          <div class="form-hint">Deploy your backend script and paste the URL here. <a href="../docs/setup-guide.md" target="_blank" style="color:var(--color-primary);">Setup guide ↗</a></div>
+        </div>
+        <button type="button" class="btn btn-secondary btn-sm" id="test-connection-btn">Test Connection</button>
+        <div class="conn-result" id="conn-result"></div>
+      </div>
+      <div class="wizard-panel__footer">
+        <span></span>
+        <button type="button" class="btn btn-primary" id="step1-next">Next: Scoring →</button>
+      </div>
+    </div>
+
+    <!-- ════ STEP 2: SCORING CONFIGURATION ════ -->
+    <div class="wizard-panel" id="step-2" hidden>
+      <div class="wizard-panel__header">
+        <h2 class="wizard-panel__title">Scoring Configuration</h2>
+        <p class="wizard-panel__subtitle">Choose how presentations will be evaluated.</p>
+      </div>
+      <div class="wizard-panel__body">
+
+        <!-- Scoring Mode -->
+        <div class="form-group">
+          <label class="form-label">Scoring Mode</label>
+          <div style="display:flex;flex-direction:column;gap:var(--space-3);margin-top:var(--space-2);">
+            <label class="form-radio-label" style="display:flex;align-items:flex-start;gap:var(--space-3);cursor:pointer;padding:var(--space-3);border:1px solid var(--color-border);border-radius:var(--radius-md);">
+              <input type="radio" name="scoringMode" value="judges_only" checked style="margin-top:3px;flex-shrink:0;" />
+              <div><div style="font-weight:var(--font-weight-semibold);">Judges Only</div><div style="font-size:var(--text-xs);color:var(--color-text-muted);">Only designated judges score presentations. Best for academic events.</div></div>
+            </label>
+            <label class="form-radio-label" style="display:flex;align-items:flex-start;gap:var(--space-3);cursor:pointer;padding:var(--space-3);border:1px solid var(--color-border);border-radius:var(--radius-md);">
+              <input type="radio" name="scoringMode" value="judges_audience" style="margin-top:3px;flex-shrink:0;" />
+              <div><div style="font-weight:var(--font-weight-semibold);">Judges + Audience</div><div style="font-size:var(--text-xs);color:var(--color-text-muted);">Both judges and audience members score. Weights configurable below.</div></div>
+            </label>
+            <label class="form-radio-label" style="display:flex;align-items:flex-start;gap:var(--space-3);cursor:pointer;padding:var(--space-3);border:1px solid var(--color-border);border-radius:var(--radius-md);">
+              <input type="radio" name="scoringMode" value="custom" style="margin-top:3px;flex-shrink:0;" />
+              <div><div style="font-weight:var(--font-weight-semibold);">Custom Weights</div><div style="font-size:var(--text-xs);color:var(--color-text-muted);">Specify exact judge and audience score weights.</div></div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Weights (shown when not judges_only) -->
+        <div id="weights-section" hidden style="margin-top:var(--space-4);padding:var(--space-4);background:var(--color-bg-secondary);border-radius:var(--radius-md);border:1px solid var(--color-border);">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4);">
+            <div class="form-group" style="margin:0;">
+              <label class="form-label" for="s2-judge-weight">Judge Weight (%)</label>
+              <input type="number" id="s2-judge-weight" name="judgeWeight" class="form-input" value="75" min="0" max="100" step="1" />
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label class="form-label" for="s2-audience-weight">Audience Weight (%)</label>
+              <input type="number" id="s2-audience-weight" name="audienceWeight" class="form-input" value="25" min="0" max="100" step="1" readonly />
+              <div class="form-hint">Auto-calculated (100 − judge weight)</div>
+            </div>
+          </div>
+          <div class="form-error" id="weights-error" style="display:none;margin-top:var(--space-2);"></div>
+        </div>
+
+        <hr style="border:none;border-top:1px solid var(--color-border);margin:var(--space-6) 0;" />
+
+        <!-- Score Type -->
+        <div class="form-group">
+          <label class="form-label">Score Type</label>
+          <div style="display:flex;gap:var(--space-3);margin-top:var(--space-2);">
+            <label style="display:flex;align-items:flex-start;gap:var(--space-3);cursor:pointer;padding:var(--space-3);border:1px solid var(--color-border);border-radius:var(--radius-md);flex:1;">
+              <input type="radio" name="rubricMode" value="single" checked style="margin-top:3px;flex-shrink:0;" />
+              <div><div style="font-weight:var(--font-weight-semibold);">Single Score</div><div style="font-size:var(--text-xs);color:var(--color-text-muted);">One score per presenter per judge (0–25 by default).</div></div>
+            </label>
+            <label style="display:flex;align-items:flex-start;gap:var(--space-3);cursor:pointer;padding:var(--space-3);border:1px solid var(--color-border);border-radius:var(--radius-md);flex:1;">
+              <input type="radio" name="rubricMode" value="multi" style="margin-top:3px;flex-shrink:0;" />
+              <div><div style="font-weight:var(--font-weight-semibold);">Multi-Rubric</div><div style="font-size:var(--text-xs);color:var(--color-text-muted);">Multiple evaluation categories, each scored separately.</div></div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Single score options -->
+        <div id="single-options" style="margin-top:var(--space-4);display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4);">
+          <div class="form-group" style="margin:0;">
+            <label class="form-label" for="s2-max-judge">Max Judge Score</label>
+            <input type="number" id="s2-max-judge" name="maxJudgeScore" class="form-input" value="25" min="1" max="100" />
+          </div>
+          <div class="form-group" style="margin:0;" id="max-audience-wrap">
+            <label class="form-label" for="s2-max-audience">Max Audience Score</label>
+            <input type="number" id="s2-max-audience" name="maxAudienceScore" class="form-input" value="25" min="1" max="100" />
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top:var(--space-3);">
+          <div class="toggle-row">
+            <div><div class="toggle-label">Allow Decimal Scores</div><div class="toggle-desc">Judges can enter scores like 18.5</div></div>
+            <label class="toggle" aria-label="Allow decimal scores"><input type="checkbox" name="allowDecimalScores" checked /><span class="toggle-slider"></span></label>
+          </div>
+        </div>
+
+        <!-- Multi-rubric builder -->
+        <div id="multi-options" hidden style="margin-top:var(--space-4);">
+          <label class="form-label" style="margin-bottom:var(--space-3);">Rubric Categories</label>
+          <div class="rubric-builder" id="rubric-builder">
+            <div class="rubric-builder__header">
+              <span>Category</span><span style="display:none;">Description</span><span>Max Points</span><span>Weight</span><span></span>
+            </div>
+            <div id="rubric-items"></div>
+            <div class="rubric-builder__add">
+              <button type="button" class="btn btn-ghost btn-sm" id="add-rubric-btn">+ Add Category</button>
+            </div>
+            <div class="rubric-builder__total" id="rubric-total">Total weight: 0</div>
+          </div>
+          <div class="form-error" id="rubric-error" style="display:none;margin-top:var(--space-2);"></div>
+        </div>
+      </div>
+      <div class="wizard-panel__footer">
+        <button type="button" class="btn btn-ghost" id="step2-back">← Back</button>
+        <button type="button" class="btn btn-primary" id="step2-next">Next: Options →</button>
+      </div>
+    </div>
+
+    <!-- ════ STEP 3: COMPETITION OPTIONS ════ -->
+    <div class="wizard-panel" id="step-3" hidden>
+      <div class="wizard-panel__header">
+        <h2 class="wizard-panel__title">Competition Options</h2>
+        <p class="wizard-panel__subtitle">Configure tracks, check-in, and leaderboard visibility.</p>
+      </div>
+      <div class="wizard-panel__body">
+
+        <div class="toggle-row">
+          <div><div class="toggle-label">Enable Tracks / Categories</div><div class="toggle-desc">Organise presenters into groups (e.g., by department or research area)</div></div>
+          <label class="toggle" aria-label="Enable tracks"><input type="checkbox" id="s3-tracks-enabled" name="tracksEnabled" /><span class="toggle-slider"></span></label>
+        </div>
+
+        <!-- Track builder (conditional) -->
+        <div id="track-builder-section" hidden style="margin:var(--space-4) 0 var(--space-2);padding:var(--space-4);background:var(--color-bg-secondary);border-radius:var(--radius-md);border:1px solid var(--color-border);">
+          <label class="form-label" style="margin-bottom:var(--space-3);">Tracks</label>
+          <div class="track-builder" id="track-builder">
+            <div id="track-items"></div>
+          </div>
+          <button type="button" class="btn btn-ghost btn-sm" id="add-track-btn" style="margin-top:var(--space-3);">+ Add Track</button>
+        </div>
+
+        <div class="toggle-row">
+          <div><div class="toggle-label">Enable Presenter Check-In</div><div class="toggle-desc">Allow admins to mark which presenters have arrived</div></div>
+          <label class="toggle" aria-label="Enable check-in"><input type="checkbox" name="checkinEnabled" checked /><span class="toggle-slider"></span></label>
+        </div>
+
+        <div class="toggle-row">
+          <div><div class="toggle-label">Public Leaderboard</div><div class="toggle-desc">Show live results at <code>/leaderboard.html</code> — can be toggled anytime</div></div>
+          <label class="toggle" aria-label="Public leaderboard"><input type="checkbox" name="publicLeaderboard" checked /><span class="toggle-slider"></span></label>
+        </div>
+
+        <div class="toggle-row">
+          <div><div class="toggle-label">Self-Vote Prevention</div><div class="toggle-desc">Block audience members from voting for their own poster</div></div>
+          <label class="toggle" aria-label="Self-vote prevention"><input type="checkbox" name="selfVotePrevention" checked /><span class="toggle-slider"></span></label>
+        </div>
+
+        <div class="toggle-row">
+          <div><div class="toggle-label">Multi-Day Event</div><div class="toggle-desc">Voting is split across multiple days</div></div>
+          <label class="toggle" aria-label="Multi-day"><input type="checkbox" id="s3-multiday" name="multiDayEvent" /><span class="toggle-slider"></span></label>
+        </div>
+
+        <div id="multiday-days" hidden style="margin-top:var(--space-3);">
+          <div class="form-group" style="max-width:160px;">
+            <label class="form-label" for="s3-day-count">Number of Days</label>
+            <input type="number" id="s3-day-count" name="currentDay" class="form-input" value="1" min="2" max="10" />
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top:var(--space-5);">
+          <label class="form-label" for="s3-tiebreaker">Tiebreaker Rule</label>
+          <select id="s3-tiebreaker" name="tiebreakerRule" class="form-select">
+            <option value="judge_avg">Judge Average (higher average wins)</option>
+            <option value="vote_count">Vote Count (more votes wins)</option>
+            <option value="random">Random (fair draw)</option>
+          </select>
+        </div>
+      </div>
+      <div class="wizard-panel__footer">
+        <button type="button" class="btn btn-ghost" id="step3-back">← Back</button>
+        <button type="button" class="btn btn-primary" id="step3-next">Next: Admin Settings →</button>
+      </div>
+    </div>
+
+    <!-- ════ STEP 4: ADMIN SETTINGS ════ -->
+    <div class="wizard-panel" id="step-4" hidden>
+      <div class="wizard-panel__header">
+        <h2 class="wizard-panel__title">Admin Settings</h2>
+        <p class="wizard-panel__subtitle">Set your admin password and notification preferences.</p>
+      </div>
+      <div class="wizard-panel__body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4);">
+          <div class="form-group" style="margin:0;">
+            <label class="form-label" for="s4-password">Admin Password <span aria-hidden="true">*</span></label>
+            <input type="password" id="s4-password" name="adminPassword" class="form-input" autocomplete="new-password" required minlength="8" aria-describedby="s4-pass-hint" />
+            <div class="form-hint" id="s4-pass-hint">Min 8 characters. Store this safely — you cannot recover it.</div>
+          </div>
+          <div class="form-group" style="margin:0;">
+            <label class="form-label" for="s4-password-confirm">Confirm Password <span aria-hidden="true">*</span></label>
+            <input type="password" id="s4-password-confirm" name="adminPasswordConfirm" class="form-input" autocomplete="new-password" required />
+          </div>
+        </div>
+        <div class="form-error" id="s4-pass-error" style="display:none;margin-top:var(--space-2);"></div>
+
+        <div class="form-group" style="margin-top:var(--space-5);">
+          <label class="form-label" for="s4-admin-email">Admin Email</label>
+          <input type="email" id="s4-admin-email" name="superAdminEmail" class="form-input" placeholder="you@example.com" />
+          <div class="form-hint">Used for system alerts (optional).</div>
+        </div>
+
+        <hr style="border:none;border-top:1px solid var(--color-border);margin:var(--space-6) 0;" />
+
+        <label class="form-label" style="margin-bottom:var(--space-3);">Email Notifications</label>
+        <div class="toggle-row">
+          <div><div class="toggle-label">Judge Invitation Emails</div><div class="toggle-desc">Send magic links when you invite judges</div></div>
+          <label class="toggle"><input type="checkbox" name="notifyJudgeInvite" checked /><span class="toggle-slider"></span></label>
+        </div>
+        <div class="toggle-row">
+          <div><div class="toggle-label">Judge Reminder Emails</div><div class="toggle-desc">Remind judges who haven't completed their assignments</div></div>
+          <label class="toggle"><input type="checkbox" name="notifyJudgeReminder" checked /><span class="toggle-slider"></span></label>
+        </div>
+        <div class="toggle-row">
+          <div><div class="toggle-label">Inactivity Alerts</div><div class="toggle-desc">Alert admin when a judge has been inactive</div></div>
+          <label class="toggle"><input type="checkbox" name="notifyInactivity" checked /><span class="toggle-slider"></span></label>
+        </div>
+        <div class="toggle-row">
+          <div><div class="toggle-label">Scorecard Emails</div><div class="toggle-desc">Email scorecards to presenters after voting closes</div></div>
+          <label class="toggle"><input type="checkbox" name="notifyScorecard" /><span class="toggle-slider"></span></label>
+        </div>
+
+        <div class="form-group" style="margin-top:var(--space-5);max-width:220px;">
+          <label class="form-label" for="s4-inactivity">Judge Inactivity Alert (minutes)</label>
+          <input type="number" id="s4-inactivity" name="judgeInactivityMinutes" class="form-input" value="30" min="5" max="180" />
+        </div>
+      </div>
+      <div class="wizard-panel__footer">
+        <button type="button" class="btn btn-ghost" id="step4-back">← Back</button>
+        <button type="button" class="btn btn-primary" id="step4-next">Next: Review →</button>
+      </div>
+    </div>
+
+    <!-- ════ STEP 5: REVIEW + CREATE ════ -->
+    <div class="wizard-panel" id="step-5" hidden>
+      <div class="wizard-panel__header">
+        <h2 class="wizard-panel__title">Review &amp; Create</h2>
+        <p class="wizard-panel__subtitle">Confirm your settings and create the event.</p>
+      </div>
+      <div class="wizard-panel__body" id="review-body">
+        <!-- Populated by JS -->
+      </div>
+      <div class="wizard-panel__footer">
+        <button type="button" class="btn btn-ghost" id="step5-back">← Back</button>
+        <button type="button" class="btn btn-primary" id="create-event-btn" style="min-width:160px;">
+          Create Event
+        </button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div id="toast-container" role="region" aria-label="Notifications" aria-live="polite"></div>
+
+<script type="module">
+  import { CONFIG, setScriptURL } from '../assets/js/config.js';
+  import { STRINGS } from '../assets/js/i18n.js';
+  import * as api from '../assets/js/api.js';
+  import { hashPassword } from '../assets/js/auth.js';
+  import { showToast, showError } from '../assets/js/ui.js';
+
+  /* ════════════════════════════════════════════════════════
+     STATE
+  ════════════════════════════════════════════════════════ */
+
+  let _currentStep = 1;
+  const TOTAL_STEPS = 5;
+
+  // Accumulated wizard data
+  const _data = {
+    // Step 1
+    eventName: '', eventDate: '', eventDescription: '', scriptURL: '',
+    // Step 2
+    scoringMode: 'judges_only', judgeWeight: 75, audienceWeight: 25,
+    rubricMode: 'single', maxJudgeScore: 25, maxAudienceScore: 25,
+    allowDecimalScores: true, rubricCategories: [],
+    // Step 3
+    tracksEnabled: false, tracks: [], checkinEnabled: true,
+    publicLeaderboard: true, selfVotePrevention: true,
+    multiDayEvent: false, currentDay: 1, tiebreakerRule: 'judge_avg',
+    // Step 4
+    adminPassword: '', adminPasswordHash: '', superAdminEmail: '',
+    notifyJudgeInvite: true, notifyJudgeReminder: true,
+    notifyInactivity: true, notifyScorecard: false,
+    judgeInactivityMinutes: 30,
+  };
+
+  let _rubricCounter = 0;
+  let _trackCounter  = 0;
+
+  /* ════════════════════════════════════════════════════════
+     STEP NAVIGATION
+  ════════════════════════════════════════════════════════ */
+
+  function goTo(step) {
+    if (step < 1 || step > TOTAL_STEPS) return;
+
+    document.getElementById(`step-${_currentStep}`).hidden = true;
+    document.getElementById(`step-${step}`).hidden = false;
+
+    // Update step indicator
+    document.querySelectorAll('.wizard-step').forEach(el => {
+      const n = parseInt(el.dataset.step);
+      el.classList.remove('is-active', 'is-complete');
+      if (n < step) el.classList.add('is-complete');
+      else if (n === step) el.classList.add('is-active');
+      // Update circle content
+      el.querySelector('.wizard-step__circle').textContent = n < step ? '✓' : n;
+    });
+
+    _currentStep = step;
+    if (step === 5) buildReview();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  /* ════════════════════════════════════════════════════════
+     STEP 1 — EVENT BASICS
+  ════════════════════════════════════════════════════════ */
+
+  document.getElementById('test-connection-btn').addEventListener('click', async () => {
+    const urlInput = document.getElementById('s1-script-url');
+    const url = urlInput.value.trim();
+    const resultEl = document.getElementById('conn-result');
+
+    if (!url) { urlInput.focus(); return; }
+
+    if (!url.startsWith('https://script.google.com/macros/s/')) {
+      resultEl.textContent = STRINGS.errors.connectionInvalid;
+      resultEl.className = 'conn-result fail';
+      resultEl.style.display = 'block';
+      return;
+    }
+
+    resultEl.textContent = 'Testing connection…';
+    resultEl.className = 'conn-result';
+    resultEl.style.display = 'block';
+
+    setScriptURL(url);
+    const { testConnection } = await import('../assets/js/api.js');
+    const r = await testConnection();
+
+    if (r.success) {
+      resultEl.textContent = `✓ Connected! Latency: ${r.latencyMs}ms`;
+      resultEl.className = 'conn-result ok';
+    } else {
+      resultEl.textContent = `✕ ${r.error || STRINGS.errors.connectionFailed}`;
+      resultEl.className = 'conn-result fail';
+    }
+  });
+
+  document.getElementById('step1-next').addEventListener('click', () => {
+    const name    = document.getElementById('s1-event-name').value.trim();
+    const date    = document.getElementById('s1-event-date').value;
+    const scriptUrl = document.getElementById('s1-script-url').value.trim();
+
+    if (!name) { document.getElementById('s1-event-name').focus(); return showError('Event name is required.'); }
+    if (!date) { document.getElementById('s1-event-date').focus(); return showError('Event date is required.'); }
+    if (!scriptUrl) { document.getElementById('s1-script-url').focus(); return showError('Script URL is required. Please test the connection first.'); }
+
+    _data.eventName        = name;
+    _data.eventDate        = date;
+    _data.eventDescription = document.getElementById('s1-event-desc').value.trim();
+    _data.scriptURL        = scriptUrl;
+
+    setScriptURL(scriptUrl);
+    goTo(2);
+  });
+
+  /* ════════════════════════════════════════════════════════
+     STEP 2 — SCORING
+  ════════════════════════════════════════════════════════ */
+
+  // Scoring mode change
+  document.querySelectorAll('input[name="scoringMode"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      const mode = document.querySelector('input[name="scoringMode"]:checked').value;
+      document.getElementById('weights-section').hidden = (mode === 'judges_only');
+      document.getElementById('max-audience-wrap').style.display = (mode === 'judges_only') ? 'none' : '';
+    });
+  });
+
+  // Judge weight → auto-calc audience weight
+  document.getElementById('s2-judge-weight').addEventListener('input', function() {
+    const v = parseInt(this.value) || 0;
+    document.getElementById('s2-audience-weight').value = Math.max(0, 100 - v);
+  });
+
+  // Rubric mode change
+  document.querySelectorAll('input[name="rubricMode"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      const mode = document.querySelector('input[name="rubricMode"]:checked').value;
+      document.getElementById('single-options').hidden = (mode === 'multi');
+      document.getElementById('multi-options').hidden  = (mode !== 'multi');
+      if (mode === 'multi' && document.getElementById('rubric-items').children.length === 0) {
+        addRubricItem({ name: 'Clarity of Presentation', maxScore: 5, weight: 1 });
+        addRubricItem({ name: 'Innovation & Originality', maxScore: 5, weight: 1 });
+        addRubricItem({ name: 'Methodology',              maxScore: 5, weight: 1 });
+        updateRubricTotal();
+      }
+    });
+  });
+
+  document.getElementById('add-rubric-btn').addEventListener('click', () => {
+    addRubricItem({ name: '', maxScore: 5, weight: 1 });
+    updateRubricTotal();
+  });
+
+  function addRubricItem(defaults = {}) {
+    const id = ++_rubricCounter;
+    const container = document.getElementById('rubric-items');
+    const div = document.createElement('div');
+    div.className = 'rubric-item';
+    div.dataset.id = id;
+    div.innerHTML = `
+      <div class="rubric-item__row">
+        <div class="form-group" style="margin:0;">
+          <label class="form-label" style="font-size:var(--text-xs);" for="rname-${id}">Category Name</label>
+          <input type="text" id="rname-${id}" class="form-input" placeholder="e.g. Clarity" value="${_esc(defaults.name || '')}" maxlength="60" data-rubric-field="name" />
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2);">
+          <div class="form-group" style="margin:0;">
+            <label class="form-label" style="font-size:var(--text-xs);">Max Points</label>
+            <input type="number" class="form-input" value="${defaults.maxScore || 5}" min="1" max="100" data-rubric-field="maxScore" />
+          </div>
+          <div class="form-group" style="margin:0;">
+            <label class="form-label" style="font-size:var(--text-xs);">Weight</label>
+            <input type="number" class="form-input" value="${defaults.weight || 1}" min="0.1" max="10" step="0.1" data-rubric-field="weight" />
+          </div>
+        </div>
+        <div class="form-group" style="margin:0;align-self:end;">
+          <label class="form-label" style="font-size:var(--text-xs);">Allow Comments</label>
+          <label class="toggle" aria-label="Allow comments" style="margin-top:10px;display:block;">
+            <input type="checkbox" data-rubric-field="allowComments" checked /><span class="toggle-slider"></span>
+          </label>
+        </div>
+        <button type="button" class="rubric-item__remove" data-remove="${id}" aria-label="Remove category">×</button>
+      </div>
+      <div class="form-group" style="margin:var(--space-2) 0 0;">
+        <textarea class="form-textarea" placeholder="Description shown to judges when scoring this category (optional)" style="font-size:var(--text-sm);min-height:60px;resize:vertical;" data-rubric-field="description" maxlength="300">${_esc(defaults.description || '')}</textarea>
+      </div>
+    `;
+    div.querySelector('[data-remove]').addEventListener('click', () => {
+      div.remove();
+      updateRubricTotal();
+    });
+    div.querySelectorAll('input[type="number"]').forEach(inp =>
+      inp.addEventListener('input', updateRubricTotal)
+    );
+    container.appendChild(div);
+  }
+
+  function updateRubricTotal() {
+    const items = document.querySelectorAll('#rubric-items .rubric-item');
+    let totalWeight = 0;
+    items.forEach(item => {
+      const w = parseFloat(item.querySelector('[data-rubric-field="weight"]')?.value) || 0;
+      totalWeight += w;
+    });
+    document.getElementById('rubric-total').textContent = `${items.length} categories · Total weight: ${totalWeight.toFixed(1)}`;
+  }
+
+  function collectRubrics() {
+    const items = document.querySelectorAll('#rubric-items .rubric-item');
+    return Array.from(items).map((item, i) => ({
+      id:            'cat_' + (i + 1),
+      name:          item.querySelector('[data-rubric-field="name"]')?.value.trim() || `Category ${i+1}`,
+      description:   item.querySelector('[data-rubric-field="description"]')?.value.trim() || '',
+      maxScore:      parseFloat(item.querySelector('[data-rubric-field="maxScore"]')?.value) || 5,
+      weight:        parseFloat(item.querySelector('[data-rubric-field="weight"]')?.value) || 1,
+      allowComments: item.querySelector('[data-rubric-field="allowComments"]')?.checked ?? true,
+    }));
+  }
+
+  document.getElementById('step2-back').addEventListener('click', () => goTo(1));
+  document.getElementById('step2-next').addEventListener('click', () => {
+    const mode = document.querySelector('input[name="scoringMode"]:checked').value;
+    const rubricMode = document.querySelector('input[name="rubricMode"]:checked').value;
+
+    // Validate weights
+    if (mode !== 'judges_only') {
+      const jw = parseInt(document.getElementById('s2-judge-weight').value) || 0;
+      const aw = parseInt(document.getElementById('s2-audience-weight').value) || 0;
+      if (jw + aw !== 100) {
+        const errEl = document.getElementById('weights-error');
+        errEl.textContent = STRINGS.errors.weightsMustSum100;
+        errEl.style.display = 'block';
+        return;
+      }
+      document.getElementById('weights-error').style.display = 'none';
+      _data.judgeWeight    = jw;
+      _data.audienceWeight = aw;
+    } else {
+      _data.judgeWeight    = 100;
+      _data.audienceWeight = 0;
+    }
+
+    // Validate rubrics
+    if (rubricMode === 'multi') {
+      const rubrics = collectRubrics();
+      if (rubrics.length === 0) {
+        document.getElementById('rubric-error').textContent = 'Add at least one rubric category.';
+        document.getElementById('rubric-error').style.display = 'block';
+        return;
+      }
+      if (rubrics.some(r => !r.name)) {
+        document.getElementById('rubric-error').textContent = 'All categories must have a name.';
+        document.getElementById('rubric-error').style.display = 'block';
+        return;
+      }
+      document.getElementById('rubric-error').style.display = 'none';
+      _data.rubricCategories = rubrics;
+    }
+
+    _data.scoringMode       = mode;
+    _data.rubricMode        = rubricMode;
+    _data.maxJudgeScore     = parseFloat(document.getElementById('s2-max-judge').value) || 25;
+    _data.maxAudienceScore  = parseFloat(document.getElementById('s2-max-audience').value) || 25;
+    _data.allowDecimalScores = document.querySelector('[name="allowDecimalScores"]').checked;
+
+    goTo(3);
+  });
+
+  /* ════════════════════════════════════════════════════════
+     STEP 3 — OPTIONS
+  ════════════════════════════════════════════════════════ */
+
+  document.getElementById('s3-tracks-enabled').addEventListener('change', function() {
+    document.getElementById('track-builder-section').hidden = !this.checked;
+  });
+
+  document.getElementById('s3-multiday').addEventListener('change', function() {
+    document.getElementById('multiday-days').hidden = !this.checked;
+  });
+
+  document.getElementById('add-track-btn').addEventListener('click', () => {
+    addTrackItem({ name: '', color: _randomColor() });
+  });
+
+  function addTrackItem(defaults = {}) {
+    const id = ++_trackCounter;
+    const container = document.getElementById('track-items');
+    const div = document.createElement('div');
+    div.className = 'track-item';
+    div.dataset.id = id;
+    div.innerHTML = `
+      <input type="color" class="form-color-input" value="${defaults.color || '#1a365d'}" aria-label="Track color" data-track-field="color" />
+      <input type="text" class="form-input" style="flex:1;" placeholder="Track name, e.g. Computer Science" value="${_esc(defaults.name || '')}" maxlength="60" data-track-field="name" />
+      <button type="button" class="rubric-item__remove" aria-label="Remove track">×</button>
+    `;
+    div.querySelector('.rubric-item__remove').addEventListener('click', () => div.remove());
+    container.appendChild(div);
+  }
+
+  function collectTracks() {
+    return Array.from(document.querySelectorAll('#track-items .track-item')).map((item, i) => ({
+      TrackID:     'T' + String(i + 1).padStart(3, '0'),
+      Name:        item.querySelector('[data-track-field="name"]')?.value.trim() || `Track ${i+1}`,
+      Color:       item.querySelector('[data-track-field="color"]')?.value || '#1a365d',
+      Description: '',
+      Active:      true,
+    }));
+  }
+
+  document.getElementById('step3-back').addEventListener('click', () => goTo(2));
+  document.getElementById('step3-next').addEventListener('click', () => {
+    _data.tracksEnabled      = document.getElementById('s3-tracks-enabled').checked;
+    _data.tracks             = _data.tracksEnabled ? collectTracks() : [];
+    _data.checkinEnabled     = document.querySelector('[name="checkinEnabled"]').checked;
+    _data.publicLeaderboard  = document.querySelector('[name="publicLeaderboard"]').checked;
+    _data.selfVotePrevention = document.querySelector('[name="selfVotePrevention"]').checked;
+    _data.multiDayEvent      = document.getElementById('s3-multiday').checked;
+    _data.currentDay         = _data.multiDayEvent ? parseInt(document.getElementById('s3-day-count').value) || 1 : 1;
+    _data.tiebreakerRule     = document.getElementById('s3-tiebreaker').value;
+    goTo(4);
+  });
+
+  /* ════════════════════════════════════════════════════════
+     STEP 4 — ADMIN SETTINGS
+  ════════════════════════════════════════════════════════ */
+
+  document.getElementById('step4-back').addEventListener('click', () => goTo(3));
+  document.getElementById('step4-next').addEventListener('click', async () => {
+    const pw1 = document.getElementById('s4-password').value;
+    const pw2 = document.getElementById('s4-password-confirm').value;
+    const errEl = document.getElementById('s4-pass-error');
+
+    if (!pw1 || pw1.length < 8) {
+      errEl.textContent = 'Password must be at least 8 characters.';
+      errEl.style.display = 'block';
+      document.getElementById('s4-password').focus();
+      return;
+    }
+    if (pw1 !== pw2) {
+      errEl.textContent = 'Passwords do not match.';
+      errEl.style.display = 'block';
+      document.getElementById('s4-password-confirm').focus();
+      return;
+    }
+    errEl.style.display = 'none';
+
+    _data.adminPassword           = pw1;
+    _data.adminPasswordHash       = await hashPassword(pw1);
+    _data.superAdminEmail         = document.getElementById('s4-admin-email').value.trim();
+    _data.notifyJudgeInvite       = document.querySelector('[name="notifyJudgeInvite"]').checked;
+    _data.notifyJudgeReminder     = document.querySelector('[name="notifyJudgeReminder"]').checked;
+    _data.notifyInactivity        = document.querySelector('[name="notifyInactivity"]').checked;
+    _data.notifyScorecard         = document.querySelector('[name="notifyScorecard"]').checked;
+    _data.judgeInactivityMinutes  = parseInt(document.getElementById('s4-inactivity').value) || 30;
+
+    goTo(5);
+  });
+
+  /* ════════════════════════════════════════════════════════
+     STEP 5 — REVIEW + CREATE
+  ════════════════════════════════════════════════════════ */
+
+  function buildReview() {
+    const body = document.getElementById('review-body');
+    const rubricSummary = _data.rubricMode === 'multi'
+      ? _data.rubricCategories.map(c => `${c.name} (max ${c.maxScore})`).join(', ')
+      : `Single score, max ${_data.maxJudgeScore}`;
+
+    body.innerHTML = `
+      <div class="review-section">
+        <div class="review-section__title">Event</div>
+        <div class="review-row"><span>Name</span><span class="review-val">${_esc(_data.eventName)}</span></div>
+        <div class="review-row"><span>Date</span><span class="review-val">${_esc(_data.eventDate)}</span></div>
+        <div class="review-row"><span>Script URL</span><span class="review-val" style="max-width:260px;overflow:hidden;text-overflow:ellipsis;">${_esc(_data.scriptURL)}</span></div>
+      </div>
+      <div class="review-section">
+        <div class="review-section__title">Scoring</div>
+        <div class="review-row"><span>Mode</span><span class="review-val">${_esc(_data.scoringMode.replace('_', ' + '))}</span></div>
+        <div class="review-row"><span>Weights</span><span class="review-val">Judges ${_data.judgeWeight}% · Audience ${_data.audienceWeight}%</span></div>
+        <div class="review-row"><span>Rubric</span><span class="review-val">${_esc(rubricSummary)}</span></div>
+        <div class="review-row"><span>Decimal Scores</span><span class="review-val">${_data.allowDecimalScores ? 'Yes' : 'No'}</span></div>
+      </div>
+      <div class="review-section">
+        <div class="review-section__title">Options</div>
+        <div class="review-row"><span>Tracks</span><span class="review-val">${_data.tracksEnabled ? `Yes (${_data.tracks.length} tracks)` : 'No'}</span></div>
+        <div class="review-row"><span>Check-In</span><span class="review-val">${_data.checkinEnabled ? 'Enabled' : 'Disabled'}</span></div>
+        <div class="review-row"><span>Public Leaderboard</span><span class="review-val">${_data.publicLeaderboard ? 'Yes' : 'No'}</span></div>
+        <div class="review-row"><span>Self-Vote Prevention</span><span class="review-val">${_data.selfVotePrevention ? 'Enabled' : 'Disabled'}</span></div>
+        <div class="review-row"><span>Tiebreaker</span><span class="review-val">${_esc(_data.tiebreakerRule.replace('_', ' '))}</span></div>
+      </div>
+      <div class="review-section">
+        <div class="review-section__title">Admin</div>
+        <div class="review-row"><span>Password</span><span class="review-val">●●●●●●●●</span></div>
+        <div class="review-row"><span>Email</span><span class="review-val">${_esc(_data.superAdminEmail) || '(not set)'}</span></div>
+      </div>
+    `;
+  }
+
+  document.getElementById('step5-back').addEventListener('click', () => goTo(4));
+
+  document.getElementById('create-event-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('create-event-btn');
+    btn.disabled = true;
+    btn.textContent = 'Creating…';
+
+    try {
+      // All remaining settings (everything except the four initializeEvent params)
+      const extraSettings = {
+        eventDescription:      _data.eventDescription,
+        scoringMode:           _data.scoringMode,
+        judgeWeight:           String(_data.judgeWeight),
+        audienceWeight:        String(_data.audienceWeight),
+        rubricMode:            _data.rubricMode,
+        rubricCategories:      JSON.stringify(_data.rubricCategories),
+        maxJudgeScore:         String(_data.maxJudgeScore),
+        maxAudienceScore:      String(_data.maxAudienceScore),
+        allowDecimalScores:    String(_data.allowDecimalScores),
+        tracksEnabled:         String(_data.tracksEnabled),
+        publicLeaderboard:     String(_data.publicLeaderboard),
+        selfVotePrevention:    String(_data.selfVotePrevention),
+        audienceVotingEnabled: String(_data.scoringMode !== 'judges_only'),
+        multiDayEvent:         String(_data.multiDayEvent),
+        currentDay:            String(_data.currentDay),
+        tiebreakerRule:        _data.tiebreakerRule,
+        judgeInactivityMinutes: String(_data.judgeInactivityMinutes),
+        notifyJudgeInvite:     String(_data.notifyJudgeInvite),
+        notifyJudgeReminder:   String(_data.notifyJudgeReminder),
+        notifyInactivity:      String(_data.notifyInactivity),
+        notifyScorecard:       String(_data.notifyScorecard),
+      };
+
+      // initializeEvent requires NO admin token — it is the first-run bootstrap.
+      // It writes the password hash AND all settings in one call.
+      const result = await api.initializeEvent({
+        eventName:         _data.eventName,
+        eventDate:         _data.eventDate,
+        adminPasswordHash: _data.adminPasswordHash,
+        adminEmail:        _data.superAdminEmail,
+        settings:          extraSettings,
+      });
+
+      if (!result.success) {
+        showError(result.error || STRINGS.errors.generic);
+        btn.disabled = false;
+        btn.textContent = 'Create Event';
+        return;
+      }
+
+      // If tracks are enabled, create them now.
+      // We have no session token yet so we use a temporary 'setup' marker;
+      // the backend Tracks.gs must allow bootstrap track creation.
+      if (_data.tracksEnabled && _data.tracks.length > 0) {
+        for (const track of _data.tracks) {
+          await api.addTrack(
+            { name: track.Name, color: track.Color, description: '' },
+            'setup'
+          );
+        }
+      }
+
+      // Get a real backend-registered session token by validating the password hash.
+      // This call hits validateAdminPassword() in Auth.gs which stores the session
+      // in PropertiesService — so all subsequent admin API calls will be accepted.
+      const { saveAdminSession } = await import('../assets/js/auth.js');
+      const sessionResult = await api.request('validateAdminPassword', {
+        passwordHash: _data.adminPasswordHash,
+      });
+
+      if (!sessionResult.success) {
+        // Non-fatal: event was created. Admin can log in normally via login.html.
+        showToast('Event created! Please log in to continue.', 'success');
+        setTimeout(() => { window.location.replace('login.html'); }, 1200);
+        return;
+      }
+
+      saveAdminSession({
+        sessionToken: sessionResult.data.sessionToken,
+        adminId:      'admin',
+        adminEmail:   _data.superAdminEmail,
+      });
+
+      showToast('Event created successfully! Redirecting…', 'success');
+      setTimeout(() => { window.location.replace('index.html'); }, 1000);
+
+    } catch (err) {
+      if (CONFIG.DEBUG) console.error('[Setup]', err);
+      showError(STRINGS.errors.generic);
+      btn.disabled = false;
+      btn.textContent = 'Create Event';
+    }
+  });
+
+  /* ════════════════════════════════════════════════════════
+     HELPERS
+  ════════════════════════════════════════════════════════ */
+
+  function _randomColor() {
+    const palette = ['#1a365d','#c9a227','#276749','#2b6cb0','#b7791f','#553c9a','#c53030','#00b5d8'];
+    return palette[_trackCounter % palette.length];
+  }
+
+  function _esc(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+</script>
+</body>
+</html>

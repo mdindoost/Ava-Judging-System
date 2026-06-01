@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Judge login — Ava Judging System" />
+  <meta name="theme-color" content="#1a365d" />
+  <title>Judge Login — Ava Judging System</title>
+
+  <link rel="stylesheet" href="../assets/css/variables.css" />
+  <link rel="stylesheet" href="../assets/css/base.css" />
+  <link rel="stylesheet" href="../assets/css/components.css" />
+  <link rel="stylesheet" href="../assets/css/judge.css" />
+</head>
+<body>
+
+<main class="judge-login-page" id="main-content" role="main">
+  <div class="judge-login-card" aria-live="polite" aria-atomic="true">
+
+    <img
+      src="../assets/img/logo.svg"
+      alt="Ava Judging System"
+      class="judge-login-card__logo"
+      width="72"
+      height="72"
+    />
+    <div class="judge-login-card__app-name">Ava Judging System</div>
+    <p class="judge-login-card__subtitle">Research Presentation Judging Platform</p>
+
+    <!-- STATE: LOADING -->
+    <div id="state-loading" class="judge-login-state" role="status" aria-label="Validating your invitation link">
+      <span class="judge-login-state__icon judge-login-state__icon--loading" aria-hidden="true">⟳</span>
+      <h1 class="judge-login-state__heading">Validating your link…</h1>
+      <p class="judge-login-state__body">Please wait while we verify your invitation.</p>
+    </div>
+
+    <!-- STATE: SUCCESS -->
+    <div id="state-success" class="judge-login-state" hidden>
+      <span class="judge-login-state__icon" aria-hidden="true">✓</span>
+      <h1 class="judge-login-state__heading judge-login-state__heading--success">Welcome!</h1>
+      <div class="judge-login-state__name" id="judge-welcome-name" aria-label="Judge name"></div>
+      <p class="judge-login-state__body" id="judge-welcome-body">
+        You're all set to start scoring. Click below or wait a moment to be redirected to your dashboard.
+      </p>
+      <a
+        href="dashboard.html"
+        class="btn btn-primary btn-lg"
+        id="go-to-dashboard-btn"
+        style="width: 100%;"
+      >
+        Go to My Dashboard
+      </a>
+      <p class="judge-login-countdown" id="redirect-countdown" aria-live="polite"></p>
+    </div>
+
+    <!-- STATE: TOKEN EXPIRED -->
+    <div id="state-expired" class="judge-login-state" hidden>
+      <span class="judge-login-state__icon" aria-hidden="true">⏱</span>
+      <h1 class="judge-login-state__heading judge-login-state__heading--error">Link Expired</h1>
+      <p class="judge-login-state__body">
+        Your invitation link has expired (links are valid for 24 hours).
+        Please contact the event administrator to request a new invitation.
+      </p>
+      <div class="judge-alert judge-alert--warning" role="alert">
+        <span class="judge-alert__icon" aria-hidden="true">⚠</span>
+        <span>Do <strong>not</strong> try refreshing the page — a new link must be sent by the admin.</span>
+      </div>
+    </div>
+
+    <!-- STATE: INVALID TOKEN -->
+    <div id="state-invalid" class="judge-login-state" hidden>
+      <span class="judge-login-state__icon" aria-hidden="true">✕</span>
+      <h1 class="judge-login-state__heading judge-login-state__heading--error">Invalid Link</h1>
+      <p class="judge-login-state__body">
+        This invitation link is not valid. It may have already been used on another device,
+        or the link may be incomplete.
+      </p>
+      <div class="judge-alert judge-alert--info" role="alert">
+        <span class="judge-alert__icon" aria-hidden="true">ℹ</span>
+        <span>Please use the link exactly as it appeared in your invitation email. Contact the event administrator if the problem persists.</span>
+      </div>
+    </div>
+
+    <!-- STATE: NO TOKEN (visited login.html directly without a ?token= param) -->
+    <div id="state-no-token" class="judge-login-state" hidden>
+      <span class="judge-login-state__icon" aria-hidden="true">🔗</span>
+      <h1 class="judge-login-state__heading">Use Your Invitation Link</h1>
+      <p class="judge-login-state__body">
+        This page is for judges who have received an invitation email.
+        Please click the link in your invitation email to log in.
+      </p>
+      <p class="judge-login-state__body">
+        If you already logged in, try going directly to your dashboard:
+      </p>
+      <a href="dashboard.html" class="btn btn-secondary" style="width: 100%;">
+        Go to Dashboard
+      </a>
+    </div>
+
+    <!-- STATE: NOT CONFIGURED -->
+    <div id="state-not-configured" class="judge-login-state" hidden>
+      <span class="judge-login-state__icon" aria-hidden="true">⚙</span>
+      <h1 class="judge-login-state__heading">System Not Configured</h1>
+      <p class="judge-login-state__body">
+        The Ava Judging System has not been configured yet. Please ask the event administrator to complete the setup.
+      </p>
+    </div>
+
+    <footer class="judge-login-footer">
+      <p>Powered by <strong>Ava Judging System</strong> — Free &amp; Open Source</p>
+    </footer>
+  </div>
+</main>
+
+<div id="toast-container" role="region" aria-label="Notifications" aria-live="polite"></div>
+
+<script type="module">
+  import { CONFIG } from '../assets/js/config.js';
+  import { STRINGS } from '../assets/js/i18n.js';
+  import * as api from '../assets/js/api.js';
+  import { saveJudgeSession, isJudgeAuthenticated } from '../assets/js/auth.js';
+  import { showToast } from '../assets/js/ui.js';
+
+  const REDIRECT_DELAY_SECONDS = 3;
+
+  // Helper: show one state, hide all others
+  const STATES = ['loading', 'success', 'expired', 'invalid', 'no-token', 'not-configured'];
+
+  function showState(stateName) {
+    for (const s of STATES) {
+      const el = document.getElementById(`state-${s}`);
+      if (el) el.hidden = (s !== stateName);
+    }
+  }
+
+  async function init() {
+    // If judge already has a valid session, redirect immediately
+    if (isJudgeAuthenticated()) {
+      window.location.href = 'dashboard.html';
+      return;
+    }
+
+    if (!CONFIG.SCRIPT_URL) {
+      showState('not-configured');
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+
+    if (!token) {
+      showState('no-token');
+      return;
+    }
+
+    showState('loading');
+
+    let result;
+    try {
+      result = await api.validateToken(token);
+    } catch (err) {
+      showState('invalid');
+      if (CONFIG.DEBUG) console.error('[Login]', 'validateToken threw', err);
+      return;
+    }
+
+    if (!result.success) {
+      const errLower = (result.error || '').toLowerCase();
+      if (errLower.includes('expired')) {
+        showState('expired');
+      } else {
+        showState('invalid');
+      }
+      return;
+    }
+
+    const judgeData = result.data;
+
+    // Store session
+    saveJudgeSession({
+      token,
+      judgeId:            judgeData.judgeId,
+      judgeName:          judgeData.judgeName,
+      assignedTrack:      judgeData.assignedTrack || null,
+      assignedPresenters: judgeData.assignedPresenters || [],
+      expiresAt:          judgeData.expiresAt,
+    });
+
+    // Show success state
+    document.getElementById('judge-welcome-name').textContent = judgeData.judgeName;
+    document.getElementById('judge-welcome-body').textContent =
+      `You're logged in and ready to score. ` +
+      (judgeData.assignedTrack
+        ? `You are assigned to the "${judgeData.assignedTrack}" track.`
+        : 'You can score all assigned presenters.');
+
+    showState('success');
+
+    // Countdown + auto-redirect
+    let remaining = REDIRECT_DELAY_SECONDS;
+    const countdownEl = document.getElementById('redirect-countdown');
+
+    function updateCountdown() {
+      countdownEl.textContent = `Redirecting to dashboard in ${remaining}…`;
+    }
+    updateCountdown();
+
+    const countdownInterval = setInterval(() => {
+      remaining--;
+      if (remaining <= 0) {
+        clearInterval(countdownInterval);
+        window.location.href = 'dashboard.html';
+      } else {
+        updateCountdown();
+      }
+    }, 1000);
+
+    // Allow user to cancel auto-redirect by clicking the button manually
+    document.getElementById('go-to-dashboard-btn').addEventListener('click', () => {
+      clearInterval(countdownInterval);
+    });
+  }
+
+  init();
+</script>
+</body>
+</html>

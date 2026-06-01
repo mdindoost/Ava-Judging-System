@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Presenter Check-In — Ava Judging System" />
+  <meta name="theme-color" content="#1a365d" />
+  <title>Presenter Check-In — Ava Judging System</title>
+
+  <link rel="stylesheet" href="assets/css/variables.css" />
+  <link rel="stylesheet" href="assets/css/base.css" />
+  <link rel="stylesheet" href="assets/css/components.css" />
+  <link rel="stylesheet" href="assets/css/judge.css" />
+
+  <style>
+    .info-card {
+      background: var(--color-primary);
+      border-radius: var(--radius-lg);
+      padding: var(--space-5) var(--space-6);
+      margin-bottom: var(--space-5);
+      color: var(--color-text-on-dark);
+      text-align: left;
+    }
+    .info-card__label {
+      font-size: var(--text-xs);
+      text-transform: uppercase;
+      letter-spacing: var(--tracking-wider);
+      color: var(--color-primary-200);
+      margin-bottom: var(--space-1);
+      font-weight: var(--font-weight-semibold);
+    }
+    .info-card__name {
+      font-family: var(--font-display);
+      font-size: var(--text-xl);
+      font-weight: var(--font-weight-bold);
+      color: var(--color-text-on-dark);
+      margin-bottom: var(--space-4);
+    }
+    .info-row {
+      display: flex;
+      gap: var(--space-3);
+      font-size: var(--text-sm);
+      padding: var(--space-2) 0;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      align-items: center;
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-row__icon { font-size: var(--text-base); flex-shrink: 0; opacity: 0.8; }
+    .info-row__label { color: var(--color-primary-200); min-width: 90px; font-size: var(--text-xs); font-weight: var(--font-weight-semibold); text-transform: uppercase; letter-spacing: var(--tracking-wide); }
+    .info-row__value { color: var(--color-text-on-dark); font-weight: var(--font-weight-semibold); }
+    .info-row__empty { color: var(--color-primary-300); font-style: italic; }
+  </style>
+</head>
+<body>
+
+<main class="judge-login-page" role="main">
+  <div class="judge-login-card" style="max-width:480px;">
+
+    <img src="assets/img/logo.svg" alt="Ava Judging System" class="judge-login-card__logo" width="72" height="72" />
+    <div class="judge-login-card__app-name" id="event-name">Presenter Check-In</div>
+    <p class="judge-login-card__subtitle" id="event-date"></p>
+
+    <!-- ── STEP 1: EMAIL ENTRY ── -->
+    <div id="state-step1">
+      <p style="font-size:var(--text-sm);color:var(--color-text-muted);margin-bottom:var(--space-5);line-height:var(--leading-relaxed);">
+        Enter the email address you registered with. We'll look up your details for confirmation.
+      </p>
+      <form id="lookup-form" novalidate autocomplete="on">
+        <div class="form-group">
+          <label class="form-label" for="input-email">Email Address *</label>
+          <input
+            type="email"
+            id="input-email"
+            class="form-input"
+            autocomplete="email"
+            placeholder="your@email.com"
+            required
+            maxlength="120"
+            inputmode="email"
+            aria-describedby="email-error"
+          />
+          <div class="form-error" id="email-error" role="alert" style="display:none;"></div>
+        </div>
+        <div class="form-error" id="lookup-error" role="alert" style="display:none;margin-top:var(--space-2);"></div>
+        <button
+          type="submit"
+          class="btn btn-primary"
+          id="lookup-btn"
+          style="width:100%;margin-top:var(--space-4);min-height:52px;font-size:var(--text-base);"
+        >
+          Find My Registration
+        </button>
+      </form>
+    </div>
+
+    <!-- ── STEP 1 LOADING ── -->
+    <div id="state-lookup-loading" hidden style="text-align:center;padding:var(--space-8) 0;">
+      <div class="spinner" role="status" aria-label="Looking up your registration"></div>
+      <p style="margin-top:var(--space-4);color:var(--color-text-muted);">Looking up your registration…</p>
+    </div>
+
+    <!-- ── STEP 2: CONFIRM INFO ── -->
+    <div id="state-step2" hidden>
+      <p style="font-size:var(--text-sm);color:var(--color-text-muted);margin-bottom:var(--space-4);">
+        Please confirm this is your registration:
+      </p>
+
+      <div class="info-card" aria-label="Your registration details">
+        <div class="info-card__label">Registered Presenter</div>
+        <div class="info-card__name" id="confirm-name"></div>
+
+        <div class="info-row">
+          <span class="info-row__icon" aria-hidden="true">🏛️</span>
+          <span class="info-row__label">Department</span>
+          <span class="info-row__value" id="confirm-dept"></span>
+        </div>
+        <div class="info-row" id="confirm-track-row">
+          <span class="info-row__icon" aria-hidden="true">🏷️</span>
+          <span class="info-row__label">Track</span>
+          <span class="info-row__value" id="confirm-track"></span>
+        </div>
+        <div class="info-row" id="confirm-poster-row">
+          <span class="info-row__icon" aria-hidden="true">📋</span>
+          <span class="info-row__label">Poster #</span>
+          <span class="info-row__value" id="confirm-poster"></span>
+        </div>
+      </div>
+
+      <p style="font-size:var(--text-xs);color:var(--color-text-muted);margin-bottom:var(--space-4);line-height:var(--leading-relaxed);">
+        If this information is not correct, please contact the event organizer.
+      </p>
+
+      <div class="form-error" id="checkin-error" role="alert" style="display:none;margin-bottom:var(--space-3);"></div>
+
+      <div style="display:flex;gap:var(--space-3);">
+        <button type="button" class="btn btn-ghost" id="back-btn" style="flex:1;">
+          ← Not Me
+        </button>
+        <button type="button" class="btn btn-primary" id="confirm-btn" style="flex:2;min-height:52px;font-size:var(--text-base);">
+          Yes, Check Me In
+        </button>
+      </div>
+    </div>
+
+    <!-- ── STEP 2 LOADING ── -->
+    <div id="state-checkin-loading" hidden style="text-align:center;padding:var(--space-8) 0;">
+      <div class="spinner" role="status" aria-label="Checking you in"></div>
+      <p style="margin-top:var(--space-4);color:var(--color-text-muted);">Checking you in…</p>
+    </div>
+
+    <!-- ── SUCCESS ── -->
+    <div id="state-success" hidden style="text-align:center;padding:var(--space-4) 0;">
+      <div style="
+        width:88px;height:88px;
+        background:var(--color-success-light);
+        border-radius:50%;
+        display:flex;align-items:center;justify-content:center;
+        margin:0 auto var(--space-5);
+        font-size:48px;line-height:1;
+        animation:bounceIn 0.4s ease-out;
+      " aria-hidden="true">✓</div>
+      <h2 style="font-family:var(--font-display);font-size:var(--text-xl);font-weight:700;color:var(--color-success);margin-bottom:var(--space-2);">
+        You're Checked In!
+      </h2>
+      <p id="success-name" style="font-family:var(--font-display);font-size:var(--text-lg);font-weight:600;color:var(--color-text);margin-bottom:var(--space-4);"></p>
+      <p style="font-size:var(--text-sm);color:var(--color-text-muted);line-height:var(--leading-relaxed);">
+        Welcome! Please proceed to your poster. Good luck with your presentation!
+      </p>
+    </div>
+
+    <!-- ── ALREADY CHECKED IN ── -->
+    <div id="state-already" hidden style="text-align:center;padding:var(--space-4) 0;">
+      <div style="
+        width:88px;height:88px;
+        background:var(--color-primary-50);
+        border-radius:50%;
+        display:flex;align-items:center;justify-content:center;
+        margin:0 auto var(--space-5);
+        font-size:48px;line-height:1;
+      " aria-hidden="true">👋</div>
+      <h2 style="font-family:var(--font-display);font-size:var(--text-xl);font-weight:700;color:var(--color-primary);margin-bottom:var(--space-2);">
+        Already Checked In
+      </h2>
+      <p id="already-name" style="font-family:var(--font-display);font-size:var(--text-lg);font-weight:600;color:var(--color-text);margin-bottom:var(--space-4);"></p>
+      <p style="font-size:var(--text-sm);color:var(--color-text-muted);line-height:var(--leading-relaxed);">
+        You were already checked in. Please proceed to your poster. See you there!
+      </p>
+    </div>
+
+    <!-- ── NOT CONFIGURED ── -->
+    <div id="state-not-configured" hidden style="text-align:center;padding:var(--space-4) 0;">
+      <div style="font-size:48px;margin-bottom:var(--space-4);" aria-hidden="true">⚙️</div>
+      <h2 style="font-family:var(--font-display);font-size:var(--text-lg);font-weight:600;color:var(--color-text);">System Not Ready</h2>
+      <p style="font-size:var(--text-sm);color:var(--color-text-muted);margin-top:var(--space-2);">
+        The check-in system is not configured yet. Please contact the event organizer.
+      </p>
+    </div>
+
+    <footer style="margin-top:var(--space-8);font-size:var(--text-xs);color:var(--color-text-muted);text-align:center;">
+      Powered by <strong>Ava Judging System</strong>
+    </footer>
+  </div>
+</main>
+
+<div id="toast-container" role="region" aria-label="Notifications" aria-live="polite"></div>
+
+<script type="module">
+  import { CONFIG } from './assets/js/config.js';
+  import { lookupPresenterForCheckin, selfCheckIn, getSettings } from './assets/js/api.js';
+
+  const STATES = ['step1','lookup-loading','step2','checkin-loading','success','already','not-configured'];
+  let _presenter = null; // holds lookup result during step 2
+
+  function showState(name) {
+    STATES.forEach(s => {
+      const el = document.getElementById(`state-${s}`);
+      if (el) el.hidden = (s !== name);
+    });
+  }
+
+  /* ── Load event name ── */
+  async function init() {
+    if (!CONFIG.SCRIPT_URL) { showState('not-configured'); return; }
+
+    try {
+      const r = await getSettings();
+      if (r.success && r.data) {
+        const eventName = r.data.eventName || 'Presenter Check-In';
+        const eventDate = r.data.eventDate || '';
+        document.getElementById('event-name').textContent = eventName;
+        if (eventDate) {
+          document.getElementById('event-date').textContent =
+            new Date(eventDate).toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+        }
+        document.title = `Check-In — ${eventName}`;
+      }
+    } catch { /* non-fatal */ }
+
+    showState('step1');
+  }
+
+  /* ── STEP 1: Look up by email ── */
+  document.getElementById('lookup-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearErrors();
+
+    const email = document.getElementById('input-email').value.trim();
+    if (!email || !email.includes('@')) {
+      showFieldError('email-error', 'Please enter a valid email address.');
+      return;
+    }
+
+    showState('lookup-loading');
+
+    let result;
+    try {
+      result = await lookupPresenterForCheckin(email);
+    } catch {
+      showState('step1');
+      showError('lookup-error', 'Network error. Please check your connection and try again.');
+      return;
+    }
+
+    if (!result.success) {
+      showState('step1');
+      showError('lookup-error', result.error || 'Something went wrong. Please try again.');
+      return;
+    }
+
+    // Store for step 2
+    _presenter = result.data;
+
+    // Populate confirmation card
+    document.getElementById('confirm-name').textContent   = _presenter.name;
+    document.getElementById('confirm-dept').textContent   = _presenter.department || '—';
+    document.getElementById('confirm-track').textContent  = _presenter.track || '—';
+    document.getElementById('confirm-poster').textContent = _presenter.posterNumber || '—';
+
+    // Hide track/poster rows if empty (optional fields)
+    document.getElementById('confirm-track-row').hidden  = !_presenter.track;
+    document.getElementById('confirm-poster-row').hidden = !_presenter.posterNumber;
+
+    showState('step2');
+  });
+
+  /* ── Back button ── */
+  document.getElementById('back-btn').addEventListener('click', () => {
+    _presenter = null;
+    clearErrors();
+    showState('step1');
+  });
+
+  /* ── STEP 2: Confirm check-in ── */
+  document.getElementById('confirm-btn').addEventListener('click', async () => {
+    if (!_presenter) { showState('step1'); return; }
+
+    clearErrors();
+    showState('checkin-loading');
+
+    const email = document.getElementById('input-email').value.trim();
+    let result;
+    try {
+      result = await selfCheckIn(_presenter.id, email);
+    } catch {
+      showState('step2');
+      showError('checkin-error', 'Network error. Please try again.');
+      return;
+    }
+
+    if (!result.success) {
+      showState('step2');
+      showError('checkin-error', result.error || 'Something went wrong. Please contact the organizer.');
+      return;
+    }
+
+    const name = result.data.presenterName || _presenter.name;
+
+    if (result.data.alreadyCheckedIn) {
+      document.getElementById('already-name').textContent = name;
+      showState('already');
+    } else {
+      document.getElementById('success-name').textContent = name;
+      showState('success');
+    }
+  });
+
+  /* ── Helpers ── */
+  function showFieldError(id, msg) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  function showError(id, msg) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  function clearErrors() {
+    document.querySelectorAll('.form-error').forEach(el => {
+      el.style.display = 'none';
+      el.textContent = '';
+    });
+  }
+
+  init();
+</script>
+</body>
+</html>

@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QR Codes — Ava Judging System</title>
+  <link rel="stylesheet" href="../assets/css/variables.css" />
+  <link rel="stylesheet" href="../assets/css/base.css" />
+  <link rel="stylesheet" href="../assets/css/components.css" />
+  <link rel="stylesheet" href="../assets/css/admin.css" />
+  <link rel="stylesheet" href="../assets/css/print.css" />
+  <style>
+    /* Print layout for QR poster cards */
+    @media print {
+      .admin-layout, .admin-topbar, .admin-page-header { display: none !important; }
+      .print-area { display: block !important; }
+      .qr-poster-card { page-break-inside: avoid; break-inside: avoid; }
+    }
+    .print-area { display: none; }
+    .qr-poster-card {
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-5);
+      text-align: center;
+      background: var(--color-bg);
+    }
+    .qr-poster-card__header { font-size: var(--text-xs); color: var(--color-text-muted); margin-bottom: var(--space-2); text-transform: uppercase; letter-spacing: .1em; }
+    .qr-poster-card__presenter { font-family: var(--font-display); font-size: var(--text-lg); font-weight: 700; color: var(--color-primary); margin-bottom: var(--space-1); }
+    .qr-poster-card__meta { font-size: var(--text-xs); color: var(--color-text-muted); margin-bottom: var(--space-3); display: flex; gap: var(--space-2); justify-content: center; flex-wrap: wrap; }
+    .qr-poster-card__qr { display: flex; justify-content: center; margin-bottom: var(--space-3); }
+    .qr-poster-card__cta { font-size: var(--text-sm); color: var(--color-primary); font-weight: 600; margin-bottom: var(--space-2); }
+    .qr-poster-card__footer { font-size: var(--text-xs); color: var(--color-text-muted); }
+  </style>
+</head>
+<body class="admin-body">
+<div class="admin-layout">
+  <nav class="admin-sidebar" id="admin-sidebar" aria-label="Admin navigation">
+    <div class="admin-sidebar__brand"><img src="../assets/img/logo.svg" alt="" width="28" height="28" /><span class="admin-sidebar__brand-name">Ava Admin</span></div>
+    <div class="admin-sidebar__scroll">
+      <ul class="admin-nav" role="list">
+        <li class="admin-nav__item"><a href="index.html"      class="admin-nav__link"><span class="admin-nav__icon">📊</span>Dashboard</a></li>
+        <li class="admin-nav__item"><a href="presenters.html" class="admin-nav__link"><span class="admin-nav__icon">🎓</span>Presenters</a></li>
+        <li class="admin-nav__item"><a href="judges.html"     class="admin-nav__link"><span class="admin-nav__icon">⚖️</span>Judges</a></li>
+        <li class="admin-nav__item"><a href="tracks.html"     class="admin-nav__link"><span class="admin-nav__icon">🏷️</span>Tracks</a></li>
+        <li class="admin-nav__item"><a href="qr-manager.html" class="admin-nav__link is-active"><span class="admin-nav__icon">📱</span>QR Codes</a></li>
+        <li class="admin-nav__item"><a href="checkin.html"    class="admin-nav__link"><span class="admin-nav__icon">✅</span>Check-In</a></li>
+        <li class="admin-nav__item"><a href="progress.html"   class="admin-nav__link"><span class="admin-nav__icon">📈</span>Progress</a></li>
+        <li class="admin-nav__item"><a href="results.html"    class="admin-nav__link"><span class="admin-nav__icon">🏆</span>Results</a></li>
+        <li class="admin-nav__item"><a href="reports.html"    class="admin-nav__link"><span class="admin-nav__icon">📋</span>Reports</a></li>
+        <li class="admin-nav__item"><a href="templates.html"  class="admin-nav__link"><span class="admin-nav__icon">📄</span>Templates</a></li>
+      </ul>
+    </div>
+    <div class="admin-sidebar__footer">
+      <div class="admin-sidebar__event-label">Event</div>
+      <div class="admin-sidebar__event-name" id="sidebar-event-name">Loading…</div>
+      <button type="button" class="btn btn-ghost btn-sm" id="sidebar-logout" style="width:100%;">Log Out</button>
+    </div>
+  </nav>
+  <div class="admin-sidebar-backdrop" id="sidebar-backdrop"></div>
+
+  <div class="admin-content-area">
+    <header class="admin-topbar">
+      <button class="admin-sidebar-toggle" id="sidebar-toggle" aria-label="Toggle navigation">☰</button>
+      <h1 class="admin-topbar__title">QR Code Manager</h1>
+      <div class="admin-topbar__right"><span class="admin-voting-badge" id="topbar-status-badge"></span></div>
+    </header>
+
+    <main class="admin-main" role="main">
+      <div class="admin-page-header">
+        <div>
+          <div class="admin-page-header__title">Presenter QR Codes</div>
+          <div class="admin-page-header__subtitle" id="qr-count-label">Loading…</div>
+        </div>
+        <div class="admin-page-header__actions">
+          <select id="filter-track-qr" class="form-select" aria-label="Filter by track">
+            <option value="">All Tracks</option>
+          </select>
+          <select id="cards-per-page-sel" class="form-select" aria-label="Cards per page for print" title="Cards per page when printing">
+            <option value="1">1 per page</option>
+            <option value="2">2 per page</option>
+            <option value="4">4 per page</option>
+            <option value="6" selected>6 per page</option>
+            <option value="9">9 per page</option>
+          </select>
+          <button type="button" class="btn btn-secondary" id="print-all-btn">🖨 Print PDF</button>
+          <button type="button" class="btn btn-primary" id="download-zip-btn">⬇ Download ZIP</button>
+        </div>
+      </div>
+
+      <!-- Progress bar for ZIP generation -->
+      <div id="zip-progress-wrap" hidden style="margin-bottom:var(--space-5);">
+        <p style="font-size:var(--text-sm);color:var(--color-text-muted);margin-bottom:var(--space-2);" id="zip-progress-label">Generating QR codes…</p>
+        <div class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" id="zip-progress-bar" style="height:8px;">
+          <div class="progress-bar__fill" id="zip-progress-fill" style="width:0%;"></div>
+        </div>
+      </div>
+
+      <!-- QR Grid -->
+      <div id="qr-loading" style="text-align:center;padding:var(--space-10);">
+        <div class="spinner" role="status" aria-label="Loading QR codes"></div>
+        <p style="margin-top:var(--space-4);color:var(--color-text-muted);">Generating QR codes…</p>
+      </div>
+
+      <div class="qr-grid" id="qr-grid" hidden></div>
+
+      <div id="qr-empty" class="empty-state" hidden>
+        <div class="empty-state__icon" aria-hidden="true">📱</div>
+        <h2 class="empty-state__heading">No Presenters Found</h2>
+        <p class="empty-state__description">Add presenters first to generate their QR codes.</p>
+        <a href="presenters.html" class="btn btn-primary">Go to Presenters</a>
+      </div>
+
+      <!-- Self Check-In QR -->
+      <div class="admin-card" style="margin-top:var(--space-8);">
+        <div class="admin-card__header">
+          <span class="admin-card__title">Presenter Self Check-In QR</span>
+          <div class="admin-card__actions">
+            <button type="button" class="btn btn-secondary btn-sm" id="download-checkin-qr-btn">Download PNG</button>
+          </div>
+        </div>
+        <div class="admin-card__body" style="display:flex;gap:var(--space-8);align-items:flex-start;flex-wrap:wrap;">
+          <div>
+            <div id="checkin-qr-container" style="display:flex;justify-content:center;padding:var(--space-2);"></div>
+          </div>
+          <div style="flex:1;min-width:220px;">
+            <p style="font-size:var(--text-sm);color:var(--color-text);font-weight:600;margin-bottom:var(--space-2);">Print this QR and place it at the event entrance.</p>
+            <p style="font-size:var(--text-sm);color:var(--color-text-muted);line-height:var(--leading-relaxed);margin-bottom:var(--space-3);">
+              Presenters scan this with their phone, enter their name and email, and check themselves in. No app or account needed.
+            </p>
+            <div style="background:var(--color-bg-secondary);border-radius:var(--radius-md);padding:var(--space-3) var(--space-4);font-size:var(--text-xs);color:var(--color-text-muted);word-break:break-all;" id="checkin-url-display"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Judge QR section -->
+      <div id="judge-qr-section" hidden style="margin-top:var(--space-10);">
+        <div class="admin-card">
+          <div class="admin-card__header">
+            <span class="admin-card__title">Judge Login QR Codes</span>
+            <div class="admin-card__actions">
+              <span style="font-size:var(--text-xs);color:var(--color-text-muted);">Scan to open judge's magic link (token required)</span>
+            </div>
+          </div>
+          <div class="admin-card__body">
+            <div class="qr-grid" id="judge-qr-grid"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- QR Preview Modal -->
+<div class="modal-overlay" id="qr-preview-modal" role="dialog" aria-modal="true" aria-labelledby="qr-preview-title">
+  <div class="modal-dialog" style="max-width:420px;">
+    <div class="modal-header">
+      <h2 class="modal-title" id="qr-preview-title">QR Code Preview</h2>
+      <button type="button" class="modal-close" id="qr-preview-close" aria-label="Close">×</button>
+    </div>
+    <div class="modal-body" style="text-align:center;">
+      <div id="qr-preview-container" style="display:flex;justify-content:center;padding:var(--space-4);"></div>
+      <p id="qr-preview-name" style="font-family:var(--font-display);font-size:var(--text-lg);font-weight:700;color:var(--color-primary);margin-top:var(--space-3);"></p>
+      <p id="qr-preview-url" style="font-size:var(--text-xs);color:var(--color-text-muted);word-break:break-all;margin-top:var(--space-2);"></p>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-ghost" id="qr-preview-close2">Close</button>
+      <button type="button" class="btn btn-primary" id="qr-preview-download">Download PNG</button>
+    </div>
+  </div>
+</div>
+
+<!-- Hidden print area -->
+<div class="print-area" id="print-area"></div>
+
+<div id="toast-container" role="region" aria-label="Notifications" aria-live="polite"></div>
+
+<script type="module">
+  import { CONFIG } from '../assets/js/config.js';
+  import { STRINGS } from '../assets/js/i18n.js';
+  import * as api from '../assets/js/api.js';
+  import { requireAdminAuth, clearAdminSession } from '../assets/js/auth.js';
+  import { showToast, showError, openModal, closeModal } from '../assets/js/ui.js';
+  import {
+    generatePresenterQRURL, generateJudgeQRURL,
+    renderQRToContainer, generateQRDataURL,
+    downloadQRAsPNG, generateAllQRsAsZIP,
+    buildQRPosterCard,
+  } from '../assets/js/qr.js';
+
+  const session = requireAdminAuth();
+  if (!session) throw new Error('Redirecting…');
+
+  document.getElementById('sidebar-toggle').addEventListener('click', () => { document.getElementById('admin-sidebar').classList.toggle('is-open'); document.getElementById('sidebar-backdrop').classList.toggle('is-visible'); });
+  document.getElementById('sidebar-backdrop').addEventListener('click', () => { document.getElementById('admin-sidebar').classList.remove('is-open'); document.getElementById('sidebar-backdrop').classList.remove('is-visible'); });
+  document.getElementById('sidebar-logout').addEventListener('click', () => { clearAdminSession(); location.href = 'login.html'; });
+
+  let _presenters = [], _judges = [], _tracks = [], _settings = {};
+  let _previewPresenter = null;
+  const QR_SIZE = CONFIG.QR.SIZE;
+
+  loadData();
+
+  async function loadData() {
+    const [pRes, jRes, tRes, sRes] = await Promise.all([
+      api.getAllPresenters(), api.getAllJudges(), api.getAllTracks(), api.getSettings(),
+    ]);
+    if (pRes.success) _presenters = pRes.data || [];
+    if (jRes.success) _judges = jRes.data || [];
+    if (tRes.success) _tracks = tRes.data || [];
+    if (sRes.success) {
+      _settings = sRes.data || {};
+      document.getElementById('sidebar-event-name').textContent = _settings.eventName || '';
+      const s = _settings.votingStatus || 'paused';
+      const el = document.getElementById('topbar-status-badge');
+      el.className = `admin-voting-badge admin-voting-badge--${s}`;
+      el.innerHTML = `<span class="admin-voting-badge__dot"></span>${s.charAt(0).toUpperCase()+s.slice(1)}`;
+    }
+
+    // Populate track filter
+    const tSel = document.getElementById('filter-track-qr');
+    _tracks.forEach(t => { const o = document.createElement('option'); o.value = t.Name; o.textContent = t.Name; tSel.appendChild(o); });
+    tSel.addEventListener('change', renderQRGrid);
+
+    document.getElementById('qr-count-label').textContent = `${_presenters.length} presenters`;
+    renderQRGrid();
+    renderJudgeQRGrid();
+    renderCheckinQR();
+  }
+
+  async function renderQRGrid() {
+    const trackFilter = document.getElementById('filter-track-qr').value;
+    const list = trackFilter ? _presenters.filter(p => p.Track === trackFilter) : _presenters;
+
+    document.getElementById('qr-loading').hidden = true;
+
+    if (list.length === 0) {
+      document.getElementById('qr-empty').hidden = false;
+      document.getElementById('qr-grid').hidden = true;
+      return;
+    }
+
+    document.getElementById('qr-empty').hidden = true;
+    const grid = document.getElementById('qr-grid');
+    grid.innerHTML = '';
+    grid.hidden = false;
+
+    for (const p of list) {
+      const card = document.createElement('div');
+      card.className = 'qr-card';
+
+      const url = generatePresenterQRURL(p.ID);
+      const qrWrap = document.createElement('div');
+      qrWrap.className = 'qr-card__canvas-wrap';
+      qrWrap.style.cssText = 'width:150px;height:150px;';
+      qrWrap.setAttribute('aria-label', `QR code for ${p.Name}`);
+
+      card.innerHTML = `
+        <div class="qr-card__id">${_esc(p.ID)}</div>
+      `;
+      card.insertBefore(qrWrap, card.firstChild);
+      card.innerHTML += `
+        <div class="qr-card__name">${_esc(p.Name)}</div>
+        <div class="qr-card__meta">${_esc(p.Department || '')}</div>
+        <div class="qr-card__actions">
+          <button type="button" class="btn btn-ghost btn-sm" data-preview="${_esc(p.ID)}" aria-label="Preview QR for ${_esc(p.Name)}">Preview</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-download="${_esc(p.ID)}" aria-label="Download QR for ${_esc(p.Name)}">PNG</button>
+        </div>
+      `;
+
+      grid.appendChild(card);
+
+      // Render QR async
+      renderQRToContainer(qrWrap, url, { size: 150 }).catch(() => {
+        qrWrap.textContent = 'QR error';
+      });
+
+      // Bind events
+      card.querySelector('[data-preview]')?.addEventListener('click', () => openPreview(p));
+      card.querySelector('[data-download]')?.addEventListener('click', async () => {
+        await downloadQRAsPNG(p.ID, p.Name);
+        showToast('Download started.', 'success', { duration: 2000 });
+      });
+    }
+  }
+
+  async function renderJudgeQRGrid() {
+    const judgesWithTokens = _judges.filter(j => j.Token);
+    if (judgesWithTokens.length === 0) return;
+
+    const section = document.getElementById('judge-qr-section');
+    const grid = document.getElementById('judge-qr-grid');
+    section.hidden = false;
+    grid.innerHTML = '';
+
+    for (const j of judgesWithTokens) {
+      const card = document.createElement('div');
+      card.className = 'qr-card';
+      const url = generateJudgeQRURL(j.Token);
+      const qrWrap = document.createElement('div');
+      qrWrap.className = 'qr-card__canvas-wrap';
+      qrWrap.style.cssText = 'width:120px;height:120px;';
+
+      card.appendChild(qrWrap);
+      card.innerHTML += `
+        <div class="qr-card__name">${_esc(j.Name)}</div>
+        <div class="qr-card__meta">${_esc(j.Email)}</div>
+      `;
+      grid.appendChild(card);
+      renderQRToContainer(qrWrap, url, { size: 120 }).catch(() => {});
+    }
+  }
+
+  /* ─── Self Check-In QR ─── */
+  async function renderCheckinQR() {
+    const checkinURL = `${CONFIG.BASE_URL}/presenter-checkin.html`;
+    document.getElementById('checkin-url-display').textContent = checkinURL;
+
+    const container = document.getElementById('checkin-qr-container');
+    await renderQRToContainer(container, checkinURL, { size: 200 }).catch(() => {});
+  }
+
+  document.getElementById('download-checkin-qr-btn').addEventListener('click', async () => {
+    const { generateQRDataURL } = await import('../assets/js/qr.js');
+    const checkinURL = `${CONFIG.BASE_URL}/presenter-checkin.html`;
+    const dataURL = await generateQRDataURL(checkinURL, { size: CONFIG.QR.SIZE });
+    if (!dataURL) { showError('QR generation failed.'); return; }
+    const a = document.createElement('a');
+    a.href = dataURL;
+    a.download = 'presenter-self-checkin-qr.png';
+    a.click();
+    showToast('Download started.', 'success', { duration: 2000 });
+  });
+
+  /* ─── QR Preview Modal ─── */
+  document.getElementById('qr-preview-close').addEventListener('click',  () => closeModal('qr-preview-modal'));
+  document.getElementById('qr-preview-close2').addEventListener('click', () => closeModal('qr-preview-modal'));
+
+  async function openPreview(presenter) {
+    _previewPresenter = presenter;
+    document.getElementById('qr-preview-title').textContent = `QR — ${presenter.Name}`;
+    document.getElementById('qr-preview-name').textContent  = presenter.Name;
+    const url = generatePresenterQRURL(presenter.ID);
+    document.getElementById('qr-preview-url').textContent   = url;
+
+    const container = document.getElementById('qr-preview-container');
+    container.innerHTML = '';
+    await renderQRToContainer(container, url, { size: QR_SIZE });
+    openModal('qr-preview-modal');
+  }
+
+  document.getElementById('qr-preview-download').addEventListener('click', async () => {
+    if (!_previewPresenter) return;
+    await downloadQRAsPNG(_previewPresenter.ID, _previewPresenter.Name);
+    showToast('Download started.', 'success', { duration: 2000 });
+  });
+
+  /* ─── Download all as ZIP ─── */
+  document.getElementById('download-zip-btn').addEventListener('click', async () => {
+    const trackFilter = document.getElementById('filter-track-qr').value;
+    const list = trackFilter ? _presenters.filter(p => p.Track === trackFilter) : _presenters;
+
+    if (list.length === 0) { showToast('No presenters to export.', 'warning'); return; }
+
+    const btn = document.getElementById('download-zip-btn');
+    btn.disabled = true;
+
+    const wrap  = document.getElementById('zip-progress-wrap');
+    const label = document.getElementById('zip-progress-label');
+    const fill  = document.getElementById('zip-progress-fill');
+    const bar   = document.getElementById('zip-progress-bar');
+    wrap.hidden = false;
+
+    try {
+      await generateAllQRsAsZIP(list, {}, (done, total) => {
+        const pct = Math.round((done / total) * 100);
+        fill.style.width = pct + '%';
+        bar.setAttribute('aria-valuenow', pct);
+        label.textContent = `Generating QR codes… ${done} / ${total}`;
+      });
+      showToast(STRINGS.success.exportReady, 'success');
+    } catch (err) {
+      showError(STRINGS.errors.zipFailed);
+      if (CONFIG.DEBUG) console.error('[QR]', err);
+    } finally {
+      btn.disabled = false;
+      setTimeout(() => { wrap.hidden = true; fill.style.width = '0%'; }, 2000);
+    }
+  });
+
+  /* ─── Print PDF ─── */
+  document.getElementById('print-all-btn').addEventListener('click', async () => {
+    const trackFilter = document.getElementById('filter-track-qr').value;
+    const list = trackFilter ? _presenters.filter(p => p.Track === trackFilter) : _presenters;
+    if (list.length === 0) { showToast('No presenters to print.', 'warning'); return; }
+
+    const cardsPerPage = parseInt(document.getElementById('cards-per-page-sel').value) || 6;
+    const printArea = document.getElementById('print-area');
+    const eventData = { eventName: _settings.eventName, eventDate: _settings.eventDate };
+
+    printArea.innerHTML = '';
+    const grid = document.createElement('div');
+    grid.style.cssText = `display:grid;grid-template-columns:repeat(${Math.min(cardsPerPage, 3)},1fr);gap:16px;padding:16px;`;
+    printArea.appendChild(grid);
+
+    showToast('Building print layout…', 'info', { duration: 2000 });
+    const btn = document.getElementById('print-all-btn');
+    btn.disabled = true;
+
+    for (const p of list) {
+      const card = buildQRPosterCard(p, eventData);
+      const qrDiv = card.querySelector(`#qr-card-${CSS.escape(p.ID)}`);
+      if (qrDiv) {
+        try {
+          await renderQRToContainer(qrDiv, generatePresenterQRURL(p.ID), { size: 200 });
+        } catch { /* skip */ }
+      }
+      grid.appendChild(card);
+    }
+
+    btn.disabled = false;
+    window.print();
+  });
+
+  function _esc(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+</script>
+</body>
+</html>

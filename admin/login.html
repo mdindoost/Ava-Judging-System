@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Admin Login — Ava Judging System" />
+  <meta name="theme-color" content="#1a365d" />
+  <title>Admin Login — Ava Judging System</title>
+
+  <link rel="stylesheet" href="../assets/css/variables.css" />
+  <link rel="stylesheet" href="../assets/css/base.css" />
+  <link rel="stylesheet" href="../assets/css/components.css" />
+  <link rel="stylesheet" href="../assets/css/admin.css" />
+</head>
+<body>
+
+<main class="admin-login-page" role="main">
+  <div class="admin-login-card">
+
+    <img
+      src="../assets/img/logo.svg"
+      alt="Ava Judging System"
+      class="admin-login-card__logo"
+      width="56"
+      height="56"
+    />
+    <h1 class="admin-login-card__title">Admin Portal</h1>
+    <p class="admin-login-card__subtitle">Ava Judging System — Event Administration</p>
+
+    <!-- Lockout banner -->
+    <div class="admin-login-lockout" id="lockout-banner" role="alert" aria-live="assertive">
+      <strong>Too many failed attempts.</strong>
+      <span id="lockout-countdown"></span>
+    </div>
+
+    <!-- Login form -->
+    <form id="login-form" novalidate autocomplete="on">
+      <div class="form-group" style="margin-bottom: var(--space-2);">
+        <label class="form-label" for="password-input">Admin Password</label>
+        <input
+          type="password"
+          id="password-input"
+          name="password"
+          class="form-input"
+          autocomplete="current-password"
+          aria-describedby="password-error attempts-hint"
+          required
+          autofocus
+        />
+        <div class="form-error" id="password-error" role="alert" style="display:none;"></div>
+      </div>
+
+      <div class="admin-login-attempts" id="attempts-hint" aria-live="polite"></div>
+
+      <button
+        type="submit"
+        class="btn btn-primary"
+        id="login-btn"
+        style="width:100%;margin-top:var(--space-5);"
+      >
+        Log In
+      </button>
+    </form>
+
+    <div style="margin-top: var(--space-6); text-align: center; font-size: var(--text-sm); color: var(--color-text-muted);">
+      <p>First time? <a href="setup.html" style="color: var(--color-primary); font-weight: var(--font-weight-semibold);">Run the setup wizard</a></p>
+      <p style="margin-top: var(--space-2);">Judges: use your <a href="../judge/login.html" style="color: var(--color-primary);">invitation link</a></p>
+    </div>
+
+    <footer style="margin-top: var(--space-8); text-align: center; font-size: var(--text-xs); color: var(--color-text-muted);">
+      Powered by <strong>Ava Judging System</strong> — Free &amp; Open Source
+    </footer>
+  </div>
+</main>
+
+<div id="toast-container" role="region" aria-label="Notifications" aria-live="polite"></div>
+
+<script type="module">
+  import { CONFIG } from '../assets/js/config.js';
+  import { STRINGS, interpolate } from '../assets/js/i18n.js';
+  import {
+    saveAdminSession,
+    isAdminAuthenticated,
+    hashPassword,
+    recordFailedLogin,
+    getLoginStatus,
+    clearLoginRecord,
+  } from '../assets/js/auth.js';
+  import { showToast } from '../assets/js/ui.js';
+
+  /* ─── If already authenticated, go straight to dashboard ─── */
+  if (isAdminAuthenticated()) {
+    window.location.replace('index.html');
+  }
+
+  /* ─── Elements ─── */
+  const form          = document.getElementById('login-form');
+  const passwordInput = document.getElementById('password-input');
+  const passwordError = document.getElementById('password-error');
+  const loginBtn      = document.getElementById('login-btn');
+  const lockoutBanner = document.getElementById('lockout-banner');
+  const lockoutCdown  = document.getElementById('lockout-countdown');
+  const attemptsHint  = document.getElementById('attempts-hint');
+
+  let _lockoutInterval = null;
+
+  /* ─── Check existing lockout on page load ─── */
+  checkLockout();
+
+  /* ─── Form submit ─── */
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    // Check lockout before doing anything
+    const status = getLoginStatus();
+    if (status.lockedOut) {
+      checkLockout();
+      return;
+    }
+
+    const password = passwordInput.value;
+    if (!password) {
+      showFieldError('Please enter your admin password.');
+      return;
+    }
+
+    loginBtn.disabled = true;
+    loginBtn.textContent = 'Verifying…';
+    clearFieldError();
+
+    try {
+      await attemptLogin(password);
+    } finally {
+      if (loginBtn) {
+        loginBtn.disabled = false;
+        loginBtn.textContent = 'Log In';
+      }
+    }
+  });
+
+  async function attemptLogin(password) {
+    /* ─── Step 1: Load stored settings to get the admin password hash ─── */
+    const scriptUrl = CONFIG.SCRIPT_URL;
+
+    if (!scriptUrl) {
+      /* No backend configured — check against a default dev hash or show setup prompt */
+      showFieldError(STRINGS.errors.notConfigured + ' Please complete the setup wizard first.');
+      return;
+    }
+
+    let settingsResult;
+    try {
+      const { getSettings } = await import('../assets/js/api.js');
+      settingsResult = await getSettings();
+    } catch {
+      showFieldError(STRINGS.errors.network);
+      return;
+    }
+
+    if (!settingsResult.success) {
+      showFieldError(settingsResult.error || STRINGS.errors.generic);
+      return;
+    }
+
+    const settings = settingsResult.data || {};
+    const storedHash = settings.adminPasswordHash || '';
+
+    if (!storedHash) {
+      showFieldError('Admin password not set. Please complete the setup wizard.');
+      return;
+    }
+
+    /* ─── Step 2: Hash entered password and compare ─── */
+    const enteredHash = await hashPassword(password);
+
+    if (enteredHash !== storedHash.toLowerCase()) {
+      const result = recordFailedLogin();
+
+      if (result.lockedOut) {
+        checkLockout();
+        return;
+      }
+
+      const remaining = result.attemptsRemaining;
+      showFieldError(STRINGS.errors.adminInvalidPassword);
+
+      if (remaining > 0 && remaining < CONFIG.ADMIN.MAX_LOGIN_ATTEMPTS) {
+        attemptsHint.textContent = interpolate(STRINGS.errors.adminAttemptsRemaining, { remaining });
+        attemptsHint.className = 'admin-login-attempts is-visible';
+      }
+      return;
+    }
+
+    /* ─── Step 3: Get a real backend session token ─── */
+    clearLoginRecord();
+    attemptsHint.className = 'admin-login-attempts';
+
+    // Call the backend to register the session in PropertiesService.
+    // This is the token all subsequent admin API calls will use.
+    let sessionToken;
+    try {
+      const { request } = await import('../assets/js/api.js');
+      const sessionResult = await request('validateAdminPassword', { passwordHash: enteredHash });
+      if (!sessionResult.success) {
+        showFieldError(sessionResult.error || STRINGS.errors.generic);
+        return;
+      }
+      sessionToken = sessionResult.data.sessionToken;
+    } catch {
+      showFieldError(STRINGS.errors.network);
+      return;
+    }
+
+    saveAdminSession({
+      sessionToken,
+      adminId:    'admin',
+      adminEmail: settings.superAdminEmail || settings.adminEmail || '',
+    });
+
+    showToast('Logged in successfully.', 'success', { duration: 1500 });
+    setTimeout(() => { window.location.replace('index.html'); }, 600);
+  }
+
+  /* ─── Lockout UI ─── */
+  function checkLockout() {
+    const status = getLoginStatus();
+    if (!status.lockedOut) {
+      lockoutBanner.style.display = 'none';
+      form.querySelector('button[type="submit"]').disabled = false;
+      clearInterval(_lockoutInterval);
+      return;
+    }
+
+    lockoutBanner.style.display = 'block';
+    form.querySelector('button[type="submit"]').disabled = true;
+    passwordInput.disabled = true;
+    updateLockoutCountdown(status.remainingMs);
+
+    _lockoutInterval = setInterval(() => {
+      const s = getLoginStatus();
+      if (!s.lockedOut) {
+        clearInterval(_lockoutInterval);
+        lockoutBanner.style.display = 'none';
+        form.querySelector('button[type="submit"]').disabled = false;
+        passwordInput.disabled = false;
+        attemptsHint.className = 'admin-login-attempts';
+      } else {
+        updateLockoutCountdown(s.remainingMs);
+      }
+    }, 1000);
+  }
+
+  function updateLockoutCountdown(remainingMs) {
+    const minutes = Math.ceil(remainingMs / 60000);
+    lockoutCdown.textContent = ` Please wait ${minutes} minute${minutes !== 1 ? 's' : ''} before trying again.`;
+  }
+
+  /* ─── Field error helpers ─── */
+  function showFieldError(msg) {
+    passwordError.textContent = msg;
+    passwordError.style.display = 'block';
+    passwordInput.classList.add('error');
+    passwordInput.setAttribute('aria-invalid', 'true');
+  }
+
+  function clearFieldError() {
+    passwordError.textContent = '';
+    passwordError.style.display = 'none';
+    passwordInput.classList.remove('error');
+    passwordInput.removeAttribute('aria-invalid');
+  }
+
+  /* ─── Clear error on typing ─── */
+  passwordInput.addEventListener('input', clearFieldError);
+
+
+</script>
+</body>
+</html>

@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Judge Dashboard — Ava Judging System" />
+  <meta name="theme-color" content="#1a365d" />
+  <title>My Dashboard — Ava Judging System</title>
+
+  <link rel="stylesheet" href="../assets/css/variables.css" />
+  <link rel="stylesheet" href="../assets/css/base.css" />
+  <link rel="stylesheet" href="../assets/css/components.css" />
+  <link rel="stylesheet" href="../assets/css/judge.css" />
+</head>
+<body>
+
+<!-- Offline banner injected by offline.js above all content -->
+
+<div class="judge-layout">
+
+  <!-- HEADER -->
+  <header class="judge-header" role="banner">
+    <div class="judge-header__brand">
+      <img
+        src="../assets/img/logo.svg"
+        alt="Ava Judging System"
+        class="judge-header__logo"
+        width="32"
+        height="32"
+      />
+      <div>
+        <div class="judge-header__title" id="header-judge-name" aria-label="Judge name">Dashboard</div>
+        <div class="judge-header__event" id="header-event-name" aria-label="Event name"></div>
+      </div>
+    </div>
+    <div class="judge-header__actions">
+      <button
+        type="button"
+        class="btn-judge-logout"
+        id="logout-btn"
+        aria-label="Log out"
+      >
+        Log Out
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT -->
+  <main class="judge-main" id="main-content" role="main">
+
+    <!-- Loading state -->
+    <div id="loading-state" aria-busy="true" aria-live="polite" style="text-align:center;padding:var(--space-10) 0;">
+      <div class="spinner" role="status" aria-label="Loading your assignments"></div>
+      <p style="margin-top:var(--space-4);color:var(--color-text-muted);">Loading your assignments…</p>
+    </div>
+
+    <!-- Error state -->
+    <div id="error-state" hidden role="alert" class="judge-alert judge-alert--warning">
+      <span class="judge-alert__icon" aria-hidden="true">⚠</span>
+      <div>
+        <strong>Could not load assignments.</strong>
+        <span id="error-message"> Please check your connection and try again.</span>
+        <br />
+        <button type="button" class="btn btn-secondary btn-sm" id="retry-btn" style="margin-top:var(--space-3);">
+          Retry
+        </button>
+      </div>
+    </div>
+
+    <!-- Dashboard content (hidden until loaded) -->
+    <div id="dashboard-content" hidden>
+
+      <!-- Voting status alert -->
+      <div id="voting-status-banner" class="judge-alert" role="status" aria-live="polite" hidden></div>
+
+      <!-- Progress summary card -->
+      <div class="judge-progress-card" aria-label="Scoring progress">
+        <div class="judge-progress-card__header">
+          <div class="judge-progress-card__title">Your Progress</div>
+          <div>
+            <div class="judge-progress-card__fraction">
+              <span id="progress-scored">0</span> / <span id="progress-total">0</span>
+            </div>
+            <div class="judge-progress-card__label">presenters scored</div>
+          </div>
+        </div>
+
+        <div class="judge-progress-card__bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" id="progress-bar-wrap">
+          <div class="judge-progress-card__fill" id="progress-bar-fill" style="width: 0%"></div>
+        </div>
+
+        <div class="judge-progress-card__stats">
+          <div class="judge-progress-stat">
+            <div class="judge-progress-stat__value" id="stat-percent">0%</div>
+            <div class="judge-progress-stat__label">Complete</div>
+          </div>
+          <div class="judge-progress-stat">
+            <div class="judge-progress-stat__value" id="stat-remaining">0</div>
+            <div class="judge-progress-stat__label">Remaining</div>
+          </div>
+          <div class="judge-progress-stat">
+            <div class="judge-progress-stat__value" id="stat-last-scored">—</div>
+            <div class="judge-progress-stat__label">Last scored</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scan QR Code button -->
+      <button
+        type="button"
+        class="judge-qr-btn"
+        id="scan-qr-btn"
+        aria-label="Open QR code scanner to score a presenter"
+      >
+        <span class="judge-qr-btn__icon" aria-hidden="true">📷</span>
+        Scan QR Code to Score
+      </button>
+
+      <!-- Presenter list section -->
+      <div class="judge-presenters-section" aria-label="Assigned presenters">
+        <div class="judge-presenters-section__header">
+          <h2 class="judge-presenters-section__title">Assigned Presenters</h2>
+
+          <div class="judge-presenters-toolbar">
+            <input
+              type="search"
+              id="presenter-search"
+              class="form-input"
+              placeholder="Search by name, ID, or poster…"
+              aria-label="Search presenters"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <select id="presenter-filter" class="form-select" aria-label="Filter by status" style="min-width: 140px;">
+              <option value="all">All presenters</option>
+              <option value="unscored">Not yet scored</option>
+              <option value="scored">Scored</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Presenter list -->
+        <div id="presenter-list" role="list" aria-label="Presenter list">
+          <!-- Rows injected by JS -->
+        </div>
+
+        <!-- Empty state: shown when no results match the filter -->
+        <div id="presenter-list-empty" class="judge-empty" hidden>
+          <span class="judge-empty__icon" aria-hidden="true">🔍</span>
+          <p class="judge-empty__heading">No matches found</p>
+          <p class="judge-empty__body">Try adjusting your search or filter.</p>
+        </div>
+
+        <!-- Empty state: judge has no assigned presenters -->
+        <div id="presenter-list-none" class="judge-empty" hidden>
+          <span class="judge-empty__icon" aria-hidden="true">📋</span>
+          <p class="judge-empty__heading">No Presenters Assigned</p>
+          <p class="judge-empty__body">The event administrator has not yet assigned any presenters to you. Check back soon or contact your admin.</p>
+        </div>
+      </div>
+
+    </div><!-- /dashboard-content -->
+  </main>
+
+  <footer class="judge-footer">
+    <p>Powered by <strong>Ava Judging System</strong></p>
+  </footer>
+</div><!-- /judge-layout -->
+
+<!-- QR SCANNER MODAL -->
+<div class="modal-overlay qr-scanner-modal" id="qr-modal" role="dialog" aria-modal="true" aria-labelledby="qr-modal-title">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h2 class="modal-title" id="qr-modal-title">Scan Presenter QR Code</h2>
+      <button type="button" class="modal-close" id="qr-modal-close" aria-label="Close QR scanner">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="qr-scanner-video-wrap" id="scanner-wrap">
+        <video
+          id="qr-video"
+          class="qr-scanner-video"
+          playsinline
+          muted
+          aria-label="Camera viewfinder for QR code scanning"
+        ></video>
+        <div class="qr-scanner-overlay" aria-hidden="true">
+          <div class="qr-scanner-frame"></div>
+        </div>
+      </div>
+      <canvas id="qr-canvas" hidden aria-hidden="true"></canvas>
+      <p class="qr-scanner-hint">Point the camera at the presenter's QR code poster</p>
+      <div id="qr-result" class="qr-scanner-result" hidden role="status" aria-live="polite"></div>
+      <div id="qr-error" class="qr-scanner-error" hidden role="alert"></div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" id="qr-modal-cancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container" role="region" aria-label="Notifications" aria-live="polite"></div>
+
+<script type="module">
+  import { CONFIG } from '../assets/js/config.js';
+  import { STRINGS, interpolate } from '../assets/js/i18n.js';
+  import * as api from '../assets/js/api.js';
+  import { requireJudgeAuth, clearJudgeSession, getJudgeToken } from '../assets/js/auth.js';
+  import { showToast, showError, openModal, closeModal } from '../assets/js/ui.js';
+  import { initOfflineDetection, registerSyncRequestFn, getQueue } from '../assets/js/offline.js';
+  import { request } from '../assets/js/api.js';
+
+  /* ============================================================
+     INIT
+     ============================================================ */
+
+  const session = requireJudgeAuth();
+  if (!session) throw new Error('Redirecting…');
+
+  registerSyncRequestFn(request);
+
+  let _presenters = [];
+  let _scoredIds = new Set();
+  let _settings = {};
+  let _qrStream = null;
+  let _qrAnimFrame = null;
+
+  initOfflineDetection(async (syncResult) => {
+    if (syncResult.synced > 0) {
+      showToast(
+        interpolate(STRINGS.success.syncComplete, { count: syncResult.synced }),
+        'success',
+      );
+    }
+  });
+
+  // Update header
+  document.getElementById('header-judge-name').textContent = session.judgeName;
+
+  document.getElementById('logout-btn').addEventListener('click', () => {
+    clearJudgeSession();
+    window.location.href = 'login.html';
+  });
+
+  document.getElementById('retry-btn').addEventListener('click', loadDashboard);
+
+  // Search + filter
+  document.getElementById('presenter-search').addEventListener('input', renderPresenterList);
+  document.getElementById('presenter-filter').addEventListener('change', renderPresenterList);
+
+  // QR scanner
+  document.getElementById('scan-qr-btn').addEventListener('click', openQRScanner);
+  document.getElementById('qr-modal-close').addEventListener('click', closeQRScanner);
+  document.getElementById('qr-modal-cancel').addEventListener('click', closeQRScanner);
+
+  // Cache-aware data load — refresh every PRESENTER_CACHE ms
+  let _lastLoaded = 0;
+  const CACHE_TTL = CONFIG.CACHE.PRESENTERS;
+
+  loadDashboard();
+
+  // Auto-refresh judge progress every minute
+  setInterval(() => {
+    if (Date.now() - _lastLoaded > CACHE_TTL) loadDashboard();
+  }, CONFIG.POLL.JUDGE_PROGRESS);
+
+  /* ============================================================
+     DATA LOADING
+     ============================================================ */
+
+  async function loadDashboard() {
+    showLoading();
+    try {
+      const [presResult, settingsResult] = await Promise.all([
+        api.getAllPresenters(),
+        api.getSettings(),
+      ]);
+
+      if (!presResult.success) {
+        showErrorState(presResult.error || STRINGS.errors.generic);
+        return;
+      }
+      if (!settingsResult.success) {
+        showErrorState(settingsResult.error || STRINGS.errors.generic);
+        return;
+      }
+
+      _settings = settingsResult.data || {};
+      document.getElementById('header-event-name').textContent = _settings.eventName || '';
+
+      // Filter to assigned presenters only
+      const allPresenters = presResult.data || [];
+      const assignedIds = session.assignedPresenters || [];
+      const assignedTrack = session.assignedTrack || null;
+
+      _presenters = allPresenters.filter(p => {
+        if (assignedIds.length > 0) return assignedIds.includes(p.ID);
+        if (assignedTrack) return p.Track === assignedTrack;
+        return true; // all
+      });
+
+      // Determine which presenters this judge has already scored
+      await loadScoredStatus();
+
+      _lastLoaded = Date.now();
+      renderDashboard();
+
+    } catch (err) {
+      if (CONFIG.DEBUG) console.error('[Dashboard]', err);
+      showErrorState(STRINGS.errors.generic);
+    }
+  }
+
+  async function loadScoredStatus() {
+    // Ask the backend which presenters this judge has scored
+    const result = await api.getAllVotes(getJudgeToken()).catch(() => null);
+    _scoredIds = new Set();
+    if (result && result.success && Array.isArray(result.data)) {
+      for (const vote of result.data) {
+        if (vote.VoterID === session.judgeId || vote.SessionToken === session.token) {
+          _scoredIds.add(vote.PresenterID);
+        }
+      }
+    }
+    // Also mark locally queued offline votes as "scored pending sync"
+    for (const item of getQueue()) {
+      if (!item.synced && item.action === 'submitVote' && item.payload?.presenterID) {
+        _scoredIds.add(item.payload.presenterID);
+      }
+    }
+  }
+
+  /* ============================================================
+     RENDERING
+     ============================================================ */
+
+  function renderDashboard() {
+    showContent();
+    updateVotingStatusBanner();
+    updateProgress();
+    renderPresenterList();
+    updateLastScoredStat();
+  }
+
+  function updateVotingStatusBanner() {
+    const banner = document.getElementById('voting-status-banner');
+    const status = _settings.votingStatus || 'open';
+
+    banner.hidden = (status === 'open');
+
+    if (status === 'paused') {
+      banner.className = 'judge-alert judge-alert--warning';
+      banner.innerHTML = '<span class="judge-alert__icon" aria-hidden="true">⏸</span><div><strong>Voting is paused.</strong> You cannot submit scores right now. Please wait for the administrator to resume voting.</div>';
+    } else if (status === 'closed') {
+      banner.className = 'judge-alert judge-alert--info';
+      banner.innerHTML = '<span class="judge-alert__icon" aria-hidden="true">🔒</span><div><strong>Voting is closed.</strong> The scoring period for this event has ended. Thank you for judging!</div>';
+    }
+  }
+
+  function updateProgress() {
+    const total = _presenters.length;
+    const scored = _presenters.filter(p => _scoredIds.has(p.ID)).length;
+    const pct = total > 0 ? Math.round((scored / total) * 100) : 0;
+
+    document.getElementById('progress-scored').textContent = scored;
+    document.getElementById('progress-total').textContent = total;
+    document.getElementById('stat-percent').textContent = pct + '%';
+    document.getElementById('stat-remaining').textContent = total - scored;
+
+    const fill = document.getElementById('progress-bar-fill');
+    fill.style.width = pct + '%';
+
+    const wrap = document.getElementById('progress-bar-wrap');
+    wrap.setAttribute('aria-valuenow', pct);
+    wrap.setAttribute('aria-valuetext', `${pct}% complete, ${scored} of ${total} scored`);
+  }
+
+  function updateLastScoredStat() {
+    // Show "just now" / "5m ago" for last scored
+    const el = document.getElementById('stat-last-scored');
+    const lastScored = localStorage.getItem('ava_last_scored_time');
+    el.textContent = lastScored ? _relativeTime(parseInt(lastScored, 10)) : '—';
+  }
+
+  function renderPresenterList() {
+    const list = document.getElementById('presenter-list');
+    const emptyFilter = document.getElementById('presenter-list-empty');
+    const noneAtAll = document.getElementById('presenter-list-none');
+
+    if (_presenters.length === 0) {
+      list.innerHTML = '';
+      emptyFilter.hidden = true;
+      noneAtAll.hidden = false;
+      return;
+    }
+
+    noneAtAll.hidden = true;
+
+    const query = document.getElementById('presenter-search').value.trim().toLowerCase();
+    const filter = document.getElementById('presenter-filter').value;
+
+    const filtered = _presenters.filter(p => {
+      const scored = _scoredIds.has(p.ID);
+      if (filter === 'scored' && !scored) return false;
+      if (filter === 'unscored' && scored) return false;
+      if (query) {
+        const search = (p.Name + ' ' + p.ID + ' ' + (p.PosterNumber || '') + ' ' + (p.Department || '')).toLowerCase();
+        if (!search.includes(query)) return false;
+      }
+      return true;
+    });
+
+    if (filtered.length === 0) {
+      list.innerHTML = '';
+      emptyFilter.hidden = false;
+      return;
+    }
+
+    emptyFilter.hidden = true;
+
+    const fragment = document.createDocumentFragment();
+    for (const p of filtered) {
+      const scored = _scoredIds.has(p.ID);
+      fragment.appendChild(buildPresenterRow(p, scored));
+    }
+    list.innerHTML = '';
+    list.appendChild(fragment);
+  }
+
+  function buildPresenterRow(presenter, isScored) {
+    const a = document.createElement('a');
+    a.href = `score.html?presenter=${encodeURIComponent(presenter.ID)}`;
+    a.className = 'judge-presenter-row' + (isScored ? ' judge-presenter-row--scored' : '');
+    a.setAttribute('role', 'listitem');
+    a.setAttribute('aria-label', `${presenter.Name}${isScored ? ' (already scored)' : ' (not yet scored)'}`);
+
+    const trackLabel = presenter.Track ? `<span class="judge-presenter-meta" style="color:var(--color-accent);font-weight:var(--font-semibold)">${escHTML(presenter.Track)}</span> · ` : '';
+
+    a.innerHTML = `
+      <div class="judge-presenter-status ${isScored ? 'judge-presenter-status--scored' : 'judge-presenter-status--pending'}" aria-hidden="true">
+        ${isScored ? '✓' : '○'}
+      </div>
+      <div class="judge-presenter-info">
+        <div class="judge-presenter-name">${escHTML(presenter.Name)}</div>
+        <div class="judge-presenter-meta">${trackLabel}${escHTML(presenter.Department || '')}</div>
+      </div>
+      ${presenter.PosterNumber ? `<div class="judge-presenter-poster" aria-label="Poster ${escHTML(presenter.PosterNumber)}">${escHTML(presenter.PosterNumber)}</div>` : ''}
+      <div class="judge-presenter-arrow" aria-hidden="true">›</div>
+    `;
+
+    return a;
+  }
+
+  /* ============================================================
+     UI STATE HELPERS
+     ============================================================ */
+
+  function showLoading() {
+    document.getElementById('loading-state').hidden = false;
+    document.getElementById('error-state').hidden = true;
+    document.getElementById('dashboard-content').hidden = true;
+  }
+
+  function showErrorState(msg) {
+    document.getElementById('loading-state').hidden = true;
+    document.getElementById('error-state').hidden = false;
+    document.getElementById('dashboard-content').hidden = true;
+    document.getElementById('error-message').textContent = ' ' + msg;
+  }
+
+  function showContent() {
+    document.getElementById('loading-state').hidden = true;
+    document.getElementById('error-state').hidden = true;
+    document.getElementById('dashboard-content').hidden = false;
+  }
+
+  /* ============================================================
+     QR CODE SCANNER (jsQR library)
+     ============================================================ */
+
+  async function openQRScanner() {
+    openModal('qr-modal');
+    document.getElementById('qr-result').hidden = true;
+    document.getElementById('qr-error').hidden = true;
+
+    const video = document.getElementById('qr-video');
+    const canvas = document.getElementById('qr-canvas');
+
+    // Dynamically load jsQR
+    let jsQR;
+    try {
+      const mod = await import('https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js');
+      jsQR = mod.default || window.jsQR;
+      if (!jsQR && typeof window.jsQR === 'function') jsQR = window.jsQR;
+    } catch {
+      // Fallback: load via script tag
+      jsQR = await loadJsQRScript();
+    }
+
+    if (!jsQR) {
+      showQRError('Could not load QR scanner library. Please enter the presenter ID manually on the score page.');
+      return;
+    }
+
+    try {
+      _qrStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' },
+      });
+      video.srcObject = _qrStream;
+      await video.play();
+    } catch (err) {
+      const msg = err.name === 'NotAllowedError'
+        ? 'Camera access was denied. Please allow camera access in your browser settings.'
+        : 'Could not access the camera. You can enter the presenter ID manually on the score page.';
+      showQRError(msg);
+      return;
+    }
+
+    scanFrame(video, canvas, jsQR);
+  }
+
+  function scanFrame(video, canvas, jsQR) {
+    if (video.paused || video.ended) return;
+
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    if (canvas.width === 0 || canvas.height === 0) {
+      _qrAnimFrame = requestAnimationFrame(() => scanFrame(video, canvas, jsQR));
+      return;
+    }
+
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(imageData.data, imageData.width, imageData.height, {
+      inversionAttempts: 'dontInvert',
+    });
+
+    if (code && code.data) {
+      handleQRResult(code.data);
+      return; // stop scanning after first successful read
+    }
+
+    _qrAnimFrame = requestAnimationFrame(() => scanFrame(video, canvas, jsQR));
+  }
+
+  function handleQRResult(data) {
+    // The QR code URL format: .../vote.html?presenter=PXXX or .../judge/score.html?presenter=PXXX
+    let presenterId = null;
+
+    try {
+      const url = new URL(data);
+      presenterId = url.searchParams.get('presenter');
+    } catch {
+      // Not a URL — treat raw data as presenter ID
+      if (/^[A-Z]\d{3,}$/i.test(data.trim())) {
+        presenterId = data.trim().toUpperCase();
+      }
+    }
+
+    if (!presenterId) {
+      showQRError('Unrecognised QR code. Please scan a presenter\'s event QR code or enter their ID manually.');
+      _qrAnimFrame = requestAnimationFrame(() => {
+        const video = document.getElementById('qr-video');
+        const canvas = document.getElementById('qr-canvas');
+        // We can't re-import jsQR here; signal failure to user
+        // The simplest correct behaviour: show error and let them close
+      });
+      return;
+    }
+
+    // Show success and navigate
+    const resultEl = document.getElementById('qr-result');
+    resultEl.textContent = `Found: ${presenterId} — Navigating to score page…`;
+    resultEl.hidden = false;
+
+    closeQRScanner();
+    window.location.href = `score.html?presenter=${encodeURIComponent(presenterId)}`;
+  }
+
+  function showQRError(msg) {
+    const el = document.getElementById('qr-error');
+    el.textContent = msg;
+    el.hidden = false;
+  }
+
+  function closeQRScanner() {
+    if (_qrAnimFrame) cancelAnimationFrame(_qrAnimFrame);
+    if (_qrStream) {
+      for (const track of _qrStream.getTracks()) track.stop();
+      _qrStream = null;
+    }
+    const video = document.getElementById('qr-video');
+    video.srcObject = null;
+    closeModal('qr-modal');
+  }
+
+  async function loadJsQRScript() {
+    return new Promise((resolve) => {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js';
+      script.onload = () => resolve(window.jsQR || null);
+      script.onerror = () => resolve(null);
+      document.head.appendChild(script);
+    });
+  }
+
+  /* ============================================================
+     HELPERS
+     ============================================================ */
+
+  function escHTML(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function _relativeTime(ts) {
+    const diff = Math.floor((Date.now() - ts) / 1000);
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+    return Math.floor(diff / 86400) + 'd ago';
+  }
+
+  // Close QR modal if overlay is clicked
+  document.getElementById('qr-modal').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeQRScanner();
+  });
+
+  // Keyboard: close modal on Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !document.getElementById('qr-modal').classList.contains('is-open') === false) {
+      closeQRScanner();
+    }
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Templates — Ava Judging System</title>
+  <link rel="stylesheet" href="../assets/css/variables.css" />
+  <link rel="stylesheet" href="../assets/css/base.css" />
+  <link rel="stylesheet" href="../assets/css/components.css" />
+  <link rel="stylesheet" href="../assets/css/admin.css" />
+</head>
+<body class="admin-body">
+<div class="admin-layout">
+  <nav class="admin-sidebar" id="admin-sidebar" aria-label="Admin navigation">
+    <div class="admin-sidebar__brand"><img src="../assets/img/logo.svg" alt="" width="28" height="28" /><span class="admin-sidebar__brand-name">Ava Admin</span></div>
+    <div class="admin-sidebar__scroll">
+      <ul class="admin-nav" role="list">
+        <li class="admin-nav__item"><a href="index.html"      class="admin-nav__link"><span class="admin-nav__icon">📊</span>Dashboard</a></li>
+        <li class="admin-nav__item"><a href="presenters.html" class="admin-nav__link"><span class="admin-nav__icon">🎓</span>Presenters</a></li>
+        <li class="admin-nav__item"><a href="judges.html"     class="admin-nav__link"><span class="admin-nav__icon">⚖️</span>Judges</a></li>
+        <li class="admin-nav__item"><a href="tracks.html"     class="admin-nav__link"><span class="admin-nav__icon">🏷️</span>Tracks</a></li>
+        <li class="admin-nav__item"><a href="qr-manager.html" class="admin-nav__link"><span class="admin-nav__icon">📱</span>QR Codes</a></li>
+        <li class="admin-nav__item"><a href="checkin.html"    class="admin-nav__link"><span class="admin-nav__icon">✅</span>Check-In</a></li>
+        <li class="admin-nav__item"><a href="progress.html"   class="admin-nav__link"><span class="admin-nav__icon">📈</span>Progress</a></li>
+        <li class="admin-nav__item"><a href="results.html"    class="admin-nav__link"><span class="admin-nav__icon">🏆</span>Results</a></li>
+        <li class="admin-nav__item"><a href="reports.html"    class="admin-nav__link"><span class="admin-nav__icon">📋</span>Reports</a></li>
+        <li class="admin-nav__item"><a href="templates.html"  class="admin-nav__link is-active"><span class="admin-nav__icon">📄</span>Templates</a></li>
+      </ul>
+    </div>
+    <div class="admin-sidebar__footer">
+      <div class="admin-sidebar__event-label">Event</div>
+      <div class="admin-sidebar__event-name" id="sidebar-event-name">Loading…</div>
+      <button type="button" class="btn btn-ghost btn-sm" id="sidebar-logout" style="width:100%;">Log Out</button>
+    </div>
+  </nav>
+  <div class="admin-sidebar-backdrop" id="sidebar-backdrop"></div>
+
+  <div class="admin-content-area">
+    <header class="admin-topbar">
+      <button class="admin-sidebar-toggle" id="sidebar-toggle" aria-label="Toggle navigation">☰</button>
+      <h1 class="admin-topbar__title">Event Templates</h1>
+      <div class="admin-topbar__right"><span class="admin-voting-badge" id="topbar-status-badge"></span></div>
+    </header>
+
+    <main class="admin-main" role="main">
+
+      <!-- Save current as template -->
+      <div class="admin-card" style="margin-bottom:var(--space-8);">
+        <div class="admin-card__header">
+          <span class="admin-card__title">Save Current Event as Template</span>
+        </div>
+        <div class="admin-card__body">
+          <p style="font-size:var(--text-sm);color:var(--color-text-muted);margin-bottom:var(--space-4);">
+            Save your current scoring configuration (rubric, weights, options) as a reusable template for future events. Presenters and judges are not included.
+          </p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4);">
+            <div class="form-group" style="margin:0;">
+              <label class="form-label" for="template-name">Template Name *</label>
+              <input type="text" id="template-name" class="form-input" placeholder="e.g. PhD Symposium Standard Rubric" maxlength="80" />
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label class="form-label" for="template-desc">Description</label>
+              <input type="text" id="template-desc" class="form-input" placeholder="Brief description…" maxlength="200" />
+            </div>
+          </div>
+          <button type="button" class="btn btn-primary" id="save-template-btn" style="margin-top:var(--space-4);">Save as Template</button>
+        </div>
+      </div>
+
+      <!-- Saved templates -->
+      <div class="admin-page-header">
+        <div><div class="admin-page-header__title">Saved Templates</div></div>
+        <div class="admin-page-header__actions">
+          <button type="button" class="btn btn-secondary btn-sm" id="export-config-btn">Export Config JSON</button>
+          <label class="btn btn-secondary btn-sm" style="cursor:pointer;">
+            Import JSON
+            <input type="file" id="import-config-input" accept=".json,application/json" style="display:none;" />
+          </label>
+        </div>
+      </div>
+
+      <div id="templates-loading" style="text-align:center;padding:var(--space-8);">
+        <div class="spinner" role="status" aria-label="Loading templates"></div>
+      </div>
+
+      <div id="templates-empty" class="empty-state" hidden>
+        <div class="empty-state__icon" aria-hidden="true">📄</div>
+        <h2 class="empty-state__heading">No Templates Saved</h2>
+        <p class="empty-state__description">Save your current event configuration as a template to reuse it for future events.</p>
+      </div>
+
+      <div class="template-grid" id="template-grid" hidden></div>
+    </main>
+  </div>
+</div>
+
+<div id="toast-container" role="region" aria-label="Notifications" aria-live="polite"></div>
+
+<script type="module">
+  import { CONFIG } from '../assets/js/config.js';
+  import { STRINGS, interpolate } from '../assets/js/i18n.js';
+  import * as api from '../assets/js/api.js';
+  import { requireAdminAuth, clearAdminSession, getAdminToken } from '../assets/js/auth.js';
+  import { showToast, showError, showSuccess, confirmDialog } from '../assets/js/ui.js';
+
+  const session = requireAdminAuth();
+  if (!session) throw new Error('Redirecting…');
+
+  document.getElementById('sidebar-toggle').addEventListener('click', () => { document.getElementById('admin-sidebar').classList.toggle('is-open'); document.getElementById('sidebar-backdrop').classList.toggle('is-visible'); });
+  document.getElementById('sidebar-backdrop').addEventListener('click', () => { document.getElementById('admin-sidebar').classList.remove('is-open'); document.getElementById('sidebar-backdrop').classList.remove('is-visible'); });
+  document.getElementById('sidebar-logout').addEventListener('click', () => { clearAdminSession(); location.href = 'login.html'; });
+
+  let _templates = [], _settings = {};
+
+  loadData();
+
+  async function loadData() {
+    const [tRes, sRes] = await Promise.all([api.getAllTemplates(), api.getSettings()]);
+    if (tRes.success) _templates = tRes.data || [];
+    if (sRes.success) {
+      _settings = sRes.data || {};
+      document.getElementById('sidebar-event-name').textContent = _settings.eventName || '';
+      const s = _settings.votingStatus || 'paused';
+      const el = document.getElementById('topbar-status-badge');
+      el.className = `admin-voting-badge admin-voting-badge--${s}`;
+      el.innerHTML = `<span class="admin-voting-badge__dot"></span>${s.charAt(0).toUpperCase()+s.slice(1)}`;
+    }
+    render();
+  }
+
+  function render() {
+    document.getElementById('templates-loading').hidden = true;
+
+    if (_templates.length === 0) {
+      document.getElementById('templates-empty').hidden = false;
+      document.getElementById('template-grid').hidden = true;
+      return;
+    }
+
+    document.getElementById('templates-empty').hidden = true;
+    const grid = document.getElementById('template-grid');
+    grid.hidden = false;
+
+    grid.innerHTML = _templates.map(t => {
+      let config = {};
+      try { config = JSON.parse(t.Config || '{}'); } catch {}
+      const rubricMode  = config.rubricMode || 'single';
+      const rubricCount = (() => { try { return JSON.parse(config.rubricCategories || '[]').length; } catch { return 0; } })();
+      const meta = rubricMode === 'multi' ? `Multi-rubric · ${rubricCount} categories` : 'Single score';
+      const createdAt = t.CreatedAt ? new Date(t.CreatedAt).toLocaleDateString() : '—';
+
+      return `<div class="template-card">
+        <div class="template-card__name">${_esc(t.Name)}</div>
+        <div class="template-card__desc">${_esc(t.Description || 'No description.')}</div>
+        <div style="font-size:var(--text-xs);color:var(--color-text-muted);display:flex;gap:var(--space-3);">
+          <span>${meta}</span>
+          <span>Saved ${createdAt}</span>
+        </div>
+        <div class="template-card__actions">
+          <button type="button" class="btn btn-primary btn-sm" data-load="${_esc(t.TemplateID)}" data-name="${_esc(t.Name)}">Load Template</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-export-t="${_esc(t.TemplateID)}">Export</button>
+          <button type="button" class="btn btn-danger btn-sm" data-delete="${_esc(t.TemplateID)}" data-name="${_esc(t.Name)}">Delete</button>
+        </div>
+      </div>`;
+    }).join('');
+
+    grid.querySelectorAll('[data-load]').forEach(btn => btn.addEventListener('click', () => loadTemplate(btn.dataset.load, btn.dataset.name)));
+    grid.querySelectorAll('[data-export-t]').forEach(btn => btn.addEventListener('click', () => exportTemplate(btn.dataset.exportT)));
+    grid.querySelectorAll('[data-delete]').forEach(btn => btn.addEventListener('click', () => deleteTemplate(btn.dataset.delete, btn.dataset.name)));
+  }
+
+  /* ─── Save as template ─── */
+  document.getElementById('save-template-btn').addEventListener('click', async () => {
+    const name = document.getElementById('template-name').value.trim();
+    const desc = document.getElementById('template-desc').value.trim();
+    if (!name) { document.getElementById('template-name').focus(); showError('Template name is required.'); return; }
+
+    const btn = document.getElementById('save-template-btn');
+    btn.disabled = true;
+    const r = await api.saveAsTemplate(name, desc, getAdminToken());
+    btn.disabled = false;
+
+    if (r.success) {
+      showSuccess(interpolate(STRINGS.success.templateSaved, { name }));
+      document.getElementById('template-name').value = '';
+      document.getElementById('template-desc').value = '';
+      loadData();
+    } else showError(r.error || STRINGS.errors.generic);
+  });
+
+  /* ─── Load template ─── */
+  async function loadTemplate(id, name) {
+    const ok = await confirmDialog({ title: 'Load Template', message: interpolate(STRINGS.confirm.loadTemplate, { name }), confirmType: 'primary', confirmText: 'Load' });
+    if (!ok) return;
+    const r = await api.loadTemplate(id, getAdminToken());
+    if (r.success) showSuccess(interpolate(STRINGS.success.templateLoaded, { name }));
+    else showError(r.error || STRINGS.errors.generic);
+  }
+
+  /* ─── Delete template ─── */
+  async function deleteTemplate(id, name) {
+    const ok = await confirmDialog({ title: 'Delete Template', message: interpolate(STRINGS.confirm.deleteTemplate, { name }), confirmType: 'danger' });
+    if (!ok) return;
+    const r = await api.deleteTemplate(id, getAdminToken());
+    if (r.success) { _templates = _templates.filter(t => t.TemplateID !== id); showToast(STRINGS.success.templateDeleted, 'success'); render(); }
+    else showError(r.error || STRINGS.errors.generic);
+  }
+
+  /* ─── Export template as JSON ─── */
+  function exportTemplate(id) {
+    const t = _templates.find(x => x.TemplateID === id);
+    if (!t) return;
+    const blob = new Blob([JSON.stringify(t, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = `template-${(t.Name || 'ava').replace(/\W+/g, '-').toLowerCase()}.json`; a.click();
+    showToast(STRINGS.success.exportReady, 'success');
+  }
+
+  /* ─── Export current event config ─── */
+  document.getElementById('export-config-btn').addEventListener('click', () => {
+    const blob = new Blob([JSON.stringify(_settings, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = 'ava-event-config.json'; a.click();
+    showToast(STRINGS.success.exportReady, 'success');
+  });
+
+  /* ─── Import JSON config ─── */
+  document.getElementById('import-config-input').addEventListener('change', async function() {
+    const file = this.files[0];
+    if (!file) return;
+    const text = await file.text();
+    let config;
+    try { config = JSON.parse(text); } catch { showError(STRINGS.errors.invalidCSV); return; }
+
+    const ok = await confirmDialog({ title: 'Import Config', message: 'Apply this configuration to the current event? This will overwrite your current settings.', confirmType: 'primary', confirmText: 'Import' });
+    if (!ok) return;
+
+    const r = await api.updateSettings(config, getAdminToken());
+    if (r.success) { showSuccess('Configuration imported.'); loadData(); }
+    else showError(r.error || STRINGS.errors.generic);
+    this.value = '';
+  });
+
+  function _esc(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+</script>
+</body>
+</html>

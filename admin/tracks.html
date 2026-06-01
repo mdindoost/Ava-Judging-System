@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tracks — Ava Judging System</title>
+  <link rel="stylesheet" href="../assets/css/variables.css" />
+  <link rel="stylesheet" href="../assets/css/base.css" />
+  <link rel="stylesheet" href="../assets/css/components.css" />
+  <link rel="stylesheet" href="../assets/css/admin.css" />
+</head>
+<body class="admin-body">
+<div class="admin-layout">
+  <nav class="admin-sidebar" id="admin-sidebar" aria-label="Admin navigation">
+    <div class="admin-sidebar__brand"><img src="../assets/img/logo.svg" alt="" width="28" height="28" /><span class="admin-sidebar__brand-name">Ava Admin</span></div>
+    <div class="admin-sidebar__scroll">
+      <ul class="admin-nav" role="list">
+        <li class="admin-nav__item"><a href="index.html"      class="admin-nav__link"><span class="admin-nav__icon">📊</span>Dashboard</a></li>
+        <li class="admin-nav__item"><a href="presenters.html" class="admin-nav__link"><span class="admin-nav__icon">🎓</span>Presenters</a></li>
+        <li class="admin-nav__item"><a href="judges.html"     class="admin-nav__link"><span class="admin-nav__icon">⚖️</span>Judges</a></li>
+        <li class="admin-nav__item"><a href="tracks.html"     class="admin-nav__link is-active"><span class="admin-nav__icon">🏷️</span>Tracks</a></li>
+        <li class="admin-nav__item"><a href="qr-manager.html" class="admin-nav__link"><span class="admin-nav__icon">📱</span>QR Codes</a></li>
+        <li class="admin-nav__item"><a href="checkin.html"    class="admin-nav__link"><span class="admin-nav__icon">✅</span>Check-In</a></li>
+        <li class="admin-nav__item"><a href="progress.html"   class="admin-nav__link"><span class="admin-nav__icon">📈</span>Progress</a></li>
+        <li class="admin-nav__item"><a href="results.html"    class="admin-nav__link"><span class="admin-nav__icon">🏆</span>Results</a></li>
+        <li class="admin-nav__item"><a href="reports.html"    class="admin-nav__link"><span class="admin-nav__icon">📋</span>Reports</a></li>
+        <li class="admin-nav__item"><a href="templates.html"  class="admin-nav__link"><span class="admin-nav__icon">📄</span>Templates</a></li>
+      </ul>
+    </div>
+    <div class="admin-sidebar__footer">
+      <div class="admin-sidebar__event-label">Event</div>
+      <div class="admin-sidebar__event-name" id="sidebar-event-name">Loading…</div>
+      <button type="button" class="btn btn-ghost btn-sm" id="sidebar-logout" style="width:100%;">Log Out</button>
+    </div>
+  </nav>
+  <div class="admin-sidebar-backdrop" id="sidebar-backdrop"></div>
+
+  <div class="admin-content-area">
+    <header class="admin-topbar">
+      <button class="admin-sidebar-toggle" id="sidebar-toggle" aria-label="Toggle navigation">☰</button>
+      <h1 class="admin-topbar__title">Manage Tracks</h1>
+      <div class="admin-topbar__right"><span class="admin-voting-badge" id="topbar-status-badge"></span></div>
+    </header>
+
+    <main class="admin-main" role="main">
+      <div class="admin-page-header">
+        <div>
+          <div class="admin-page-header__title">Tracks / Categories</div>
+          <div class="admin-page-header__subtitle">Organise presenters and judges by research area or category.</div>
+        </div>
+        <div class="admin-page-header__actions">
+          <button type="button" class="btn btn-ghost btn-sm" id="refresh-btn" aria-label="Refresh">↻ Refresh</button>
+          <button type="button" class="btn btn-primary" id="add-track-btn">+ Add Track</button>
+        </div>
+      </div>
+
+      <!-- Track cards grid -->
+      <div id="tracks-loading" style="text-align:center;padding:var(--space-10);">
+        <div class="spinner" role="status" aria-label="Loading tracks"></div>
+      </div>
+
+      <div id="tracks-empty" class="empty-state" hidden>
+        <div class="empty-state__icon" aria-hidden="true">🏷️</div>
+        <h2 class="empty-state__heading">No Tracks Yet</h2>
+        <p class="empty-state__description">Tracks let you group presenters into categories. Use the <strong>+ Add Track</strong> button above to create your first track.</p>
+      </div>
+
+      <div id="tracks-grid" class="template-grid" hidden></div>
+
+      <!-- Presenter-Track assignment table -->
+      <div id="assign-section" hidden style="margin-top:var(--space-8);">
+        <div class="admin-card">
+          <div class="admin-card__header">
+            <span class="admin-card__title">Presenter Track Assignments</span>
+            <div class="admin-card__actions">
+              <select id="bulk-track-select" class="form-select" style="min-width:160px;" aria-label="Assign selected to track">
+                <option value="">Assign to track…</option>
+              </select>
+              <button type="button" class="btn btn-secondary btn-sm" id="bulk-assign-btn">Apply to Selected</button>
+            </div>
+          </div>
+          <div class="admin-card__body--no-pad">
+            <table class="admin-table" id="assign-table" aria-label="Presenter track assignments">
+              <thead>
+                <tr>
+                  <th style="width:36px;"><input type="checkbox" id="check-all" aria-label="Select all" /></th>
+                  <th>Presenter</th>
+                  <th>Department</th>
+                  <th>Current Track</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="assign-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ADD / EDIT TRACK MODAL -->
+<div class="modal-overlay" id="track-modal" role="dialog" aria-modal="true" aria-labelledby="tmodal-title">
+  <div class="modal-dialog" style="max-width:480px;">
+    <div class="modal-header">
+      <h2 class="modal-title" id="tmodal-title">Add Track</h2>
+      <button type="button" class="modal-close" id="tmodal-close" aria-label="Close">×</button>
+    </div>
+    <form id="track-form" novalidate>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="tf-name">Track Name *</label>
+          <input type="text" id="tf-name" name="name" class="form-input" required maxlength="60" placeholder="e.g. Computer Science" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="tf-desc">Description</label>
+          <textarea id="tf-desc" name="description" class="form-textarea" rows="2" maxlength="200"></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="tf-color">Track Color</label>
+          <div style="display:flex;align-items:center;gap:var(--space-3);">
+            <input type="color" id="tf-color" name="color" class="form-color-input" value="#1a365d" aria-label="Choose color" />
+            <div id="tf-color-preview" style="padding:var(--space-1) var(--space-3);border-radius:var(--radius-full);font-size:var(--text-sm);font-weight:600;">Preview Tag</div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" id="tmodal-cancel">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Track</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="toast-container" role="region" aria-label="Notifications" aria-live="polite"></div>
+
+<script type="module">
+  import { CONFIG } from '../assets/js/config.js';
+  import { STRINGS, interpolate } from '../assets/js/i18n.js';
+  import * as api from '../assets/js/api.js';
+  import { requireAdminAuth, clearAdminSession, getAdminToken } from '../assets/js/auth.js';
+  import { showToast, showError, showSuccess, confirmDialog, openModal, closeModal } from '../assets/js/ui.js';
+
+  const session = requireAdminAuth();
+  if (!session) throw new Error('Redirecting…');
+
+  document.getElementById('sidebar-toggle').addEventListener('click', () => { document.getElementById('admin-sidebar').classList.toggle('is-open'); document.getElementById('sidebar-backdrop').classList.toggle('is-visible'); });
+  document.getElementById('sidebar-backdrop').addEventListener('click', () => { document.getElementById('admin-sidebar').classList.remove('is-open'); document.getElementById('sidebar-backdrop').classList.remove('is-visible'); });
+  document.getElementById('sidebar-logout').addEventListener('click', () => { clearAdminSession(); location.href = 'login.html'; });
+
+  let _tracks = [], _presenters = [], _editingTrackId = null, _selected = new Set();
+
+  document.getElementById('refresh-btn').addEventListener('click', loadData);
+  loadData();
+
+  async function loadData() {
+    try {
+      const [tRes, pRes, sRes] = await Promise.all([
+        api.getAllTracks(),
+        api.getAllPresenters(),
+        api.getSettings(),
+      ]);
+
+      if (tRes.success) {
+        _tracks = tRes.data || [];
+      } else {
+        showError('Could not load tracks: ' + (tRes.error || 'Unknown error'));
+        _tracks = [];
+      }
+
+      if (pRes.success) _presenters = pRes.data || [];
+
+      if (sRes.success) {
+        document.getElementById('sidebar-event-name').textContent = sRes.data?.eventName || '';
+        const s = sRes.data?.votingStatus || 'paused';
+        const el = document.getElementById('topbar-status-badge');
+        el.className = `admin-voting-badge admin-voting-badge--${s}`;
+        el.innerHTML = `<span class="admin-voting-badge__dot"></span>${s.charAt(0).toUpperCase()+s.slice(1)}`;
+      }
+
+      render();
+    } catch (err) {
+      showError('Failed to load page data. Check your connection and try refreshing.');
+      if (CONFIG.DEBUG) console.error('[Tracks]', err);
+    }
+  }
+
+  function render() {
+    document.getElementById('tracks-loading').hidden = true;
+
+    if (_tracks.length === 0) {
+      document.getElementById('tracks-empty').hidden = false;
+      document.getElementById('tracks-grid').hidden = true;
+      document.getElementById('assign-section').hidden = true;
+      return;
+    }
+
+    document.getElementById('tracks-empty').hidden = true;
+    document.getElementById('tracks-grid').hidden = false;
+    document.getElementById('assign-section').hidden = false;
+
+    // Build track stat data
+    const countByTrack = {};
+    _presenters.forEach(p => { if (p.Track) countByTrack[p.Track] = (countByTrack[p.Track] || 0) + 1; });
+
+    const grid = document.getElementById('tracks-grid');
+    grid.innerHTML = _tracks.map(t => `
+      <div class="template-card">
+        <div style="display:flex;align-items:center;gap:var(--space-3);margin-bottom:var(--space-2);">
+          <div style="width:16px;height:16px;border-radius:50%;background:${_esc(t.Color || '#1a365d')};flex-shrink:0;"></div>
+          <div class="template-card__name">${_esc(t.Name)}</div>
+        </div>
+        ${t.Description ? `<div class="template-card__desc">${_esc(t.Description)}</div>` : ''}
+        <div class="template-card__meta">
+          ${countByTrack[t.Name] || 0} presenters
+        </div>
+        <div class="template-card__actions">
+          <button type="button" class="btn btn-secondary btn-sm" data-edit="${_esc(t.TrackID)}" aria-label="Edit ${_esc(t.Name)}">Edit</button>
+          <button type="button" class="btn btn-danger btn-sm" data-delete="${_esc(t.TrackID)}" data-name="${_esc(t.Name)}" aria-label="Delete ${_esc(t.Name)}">Delete</button>
+        </div>
+      </div>
+    `).join('');
+
+    grid.querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', () => openEditModal(b.dataset.edit)));
+    grid.querySelectorAll('[data-delete]').forEach(b => b.addEventListener('click', () => deleteTrack(b.dataset.delete, b.dataset.name)));
+
+    // Populate bulk track select
+    const sel = document.getElementById('bulk-track-select');
+    const first = sel.options[0]; sel.innerHTML = ''; sel.appendChild(first.cloneNode(true));
+    _tracks.forEach(t => { const o = document.createElement('option'); o.value = t.Name; o.textContent = t.Name; sel.appendChild(o); });
+
+    // Presenter assignment table
+    renderAssignTable();
+  }
+
+  function renderAssignTable() {
+    const tbody = document.getElementById('assign-tbody');
+    tbody.innerHTML = _presenters.map(p => `
+      <tr class="${_selected.has(p.ID) ? 'is-selected' : ''}">
+        <td><input type="checkbox" data-id="${_esc(p.ID)}" class="row-check" ${_selected.has(p.ID) ? 'checked' : ''} aria-label="Select ${_esc(p.Name)}" /></td>
+        <td style="font-weight:600;">${_esc(p.Name)}</td>
+        <td style="color:var(--color-text-muted);">${_esc(p.Department || '')}</td>
+        <td>
+          <select class="form-select form-select-sm" data-pid="${_esc(p.ID)}" aria-label="Track for ${_esc(p.Name)}" style="padding:var(--space-1) var(--space-2);height:auto;font-size:var(--text-sm);">
+            <option value="">— No Track —</option>
+            ${_tracks.map(t => `<option value="${_esc(t.Name)}" ${p.Track === t.Name ? 'selected' : ''}>${_esc(t.Name)}</option>`).join('')}
+          </select>
+        </td>
+        <td>
+          <button type="button" class="btn btn-ghost btn-sm" data-save="${_esc(p.ID)}" aria-label="Save track for ${_esc(p.Name)}">Save</button>
+        </td>
+      </tr>
+    `).join('');
+
+    tbody.querySelectorAll('.row-check').forEach(cb => cb.addEventListener('change', () => {
+      if (cb.checked) _selected.add(cb.dataset.id); else _selected.delete(cb.dataset.id);
+      cb.closest('tr').classList.toggle('is-selected', cb.checked);
+    }));
+
+    tbody.querySelectorAll('[data-save]').forEach(btn => btn.addEventListener('click', async () => {
+      const pid = btn.dataset.save;
+      const sel = tbody.querySelector(`select[data-pid="${CSS.escape(pid)}"]`);
+      if (!sel) return;
+      const track = sel.value;
+      const r = await api.editPresenter(pid, { Track: track }, getAdminToken());
+      if (r.success) {
+        const p = _presenters.find(x => x.ID === pid);
+        if (p) p.Track = track;
+        showToast('Track assigned.', 'success', { duration: 2000 });
+      } else showError(r.error);
+    }));
+
+    document.getElementById('check-all').addEventListener('change', function() {
+      _presenters.forEach(p => { if (this.checked) _selected.add(p.ID); else _selected.delete(p.ID); });
+      renderAssignTable();
+    });
+  }
+
+  document.getElementById('bulk-assign-btn').addEventListener('click', async () => {
+    const track = document.getElementById('bulk-track-select').value;
+    if (!track || _selected.size === 0) { showToast('Select presenters and a track first.', 'warning'); return; }
+    const token = getAdminToken();
+    let ok = 0;
+    for (const pid of [..._selected]) {
+      const r = await api.editPresenter(pid, { Track: track }, token);
+      if (r.success) { const p = _presenters.find(x => x.ID === pid); if (p) p.Track = track; ok++; }
+    }
+    _selected.clear();
+    showSuccess(`${ok} presenter(s) assigned to ${track}.`);
+    renderAssignTable();
+  });
+
+  /* ─── Add/Edit Track ─── */
+  document.getElementById('add-track-btn').addEventListener('click', openAddModal);
+  document.getElementById('tmodal-close').addEventListener('click', () => closeModal('track-modal'));
+  document.getElementById('tmodal-cancel').addEventListener('click', () => closeModal('track-modal'));
+
+  // Live color preview
+  document.getElementById('tf-color').addEventListener('input', function() {
+    const preview = document.getElementById('tf-color-preview');
+    preview.style.background = this.value + '22';
+    preview.style.color = this.value;
+    preview.style.border = `1px solid ${this.value}44`;
+  });
+
+  // 25 visually distinct colors — cycles based on how many tracks already exist
+  const TRACK_PALETTE = [
+    '#1a365d', // navy
+    '#c9a227', // gold
+    '#276749', // forest green
+    '#c53030', // red
+    '#553c9a', // purple
+    '#2b6cb0', // royal blue
+    '#b7791f', // orange
+    '#285e61', // teal
+    '#702459', // wine / maroon
+    '#00b5d8', // cyan
+    '#744210', // chocolate brown
+    '#22543d', // dark emerald
+    '#c05621', // rust
+    '#1d4ed8', // bright blue
+    '#be185d', // hot pink
+    '#6b21a8', // deep violet
+    '#0f766e', // dark teal
+    '#92400e', // saddle brown
+    '#065f46', // pine green
+    '#7f1d1d', // dark crimson
+    '#1e3a5f', // steel blue
+    '#14532d', // dark forest
+    '#312e81', // indigo
+    '#78350f', // dark amber
+    '#134e4a', // dark cyan
+  ];
+
+  function openAddModal() {
+    _editingTrackId = null;
+    document.getElementById('tmodal-title').textContent = 'Add Track';
+    document.getElementById('track-form').reset();
+
+    // Pick the next unused color based on current track count
+    const nextColor = TRACK_PALETTE[_tracks.length % TRACK_PALETTE.length];
+    const colorInput = document.getElementById('tf-color');
+    colorInput.value = nextColor;
+
+    // Update the live preview to match
+    const preview = document.getElementById('tf-color-preview');
+    preview.style.background = nextColor + '22';
+    preview.style.color = nextColor;
+    preview.style.border = `1px solid ${nextColor}44`;
+
+    openModal('track-modal');
+  }
+
+  function openEditModal(id) {
+    const t = _tracks.find(x => x.TrackID === id);
+    if (!t) return;
+    _editingTrackId = id;
+    document.getElementById('tmodal-title').textContent = 'Edit Track';
+    document.getElementById('tf-name').value  = t.Name || '';
+    document.getElementById('tf-desc').value  = t.Description || '';
+    document.getElementById('tf-color').value = t.Color || '#1a365d';
+    openModal('track-modal');
+  }
+
+  document.getElementById('track-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('tf-name').value.trim();
+    if (!name) { showError('Track name is required.'); return; }
+
+    // Client-side duplicate check — catches it instantly without a network round-trip
+    const nameLower = name.toLowerCase();
+    const duplicate = _tracks.find(t =>
+      t.Name && t.Name.toLowerCase() === nameLower && t.TrackID !== _editingTrackId
+    );
+    if (duplicate) {
+      showError(`A track named "${name}" already exists.`);
+      return;
+    }
+
+    // Backend expects uppercase keys: Name, Description, Color
+    const data = {
+      Name:        name,
+      Description: document.getElementById('tf-desc').value.trim(),
+      Color:       document.getElementById('tf-color').value,
+    };
+    const token = getAdminToken();
+    let r;
+    if (_editingTrackId) {
+      r = await api.editTrack(_editingTrackId, data, token);
+      if (r.success) showSuccess(STRINGS.success.trackUpdated);
+    } else {
+      r = await api.addTrack(data, token);
+      if (r.success) showSuccess(STRINGS.success.trackAdded);
+    }
+    if (!r.success) { showError(r.error || STRINGS.errors.generic); return; }
+    closeModal('track-modal');
+    // Reload from server so local array always reflects the real Sheet data
+    await loadData();
+  });
+
+  async function deleteTrack(id, name) {
+    const confirmed = await confirmDialog({ title: 'Delete Track', message: interpolate(STRINGS.confirm.deleteTrack, { name }), confirmText: 'Delete', confirmType: 'danger' });
+    if (!confirmed) return;
+    const r = await api.deleteTrack(id, getAdminToken());
+    if (r.success) { showToast(STRINGS.success.trackDeleted, 'success'); await loadData(); }
+    else showError(r.error || STRINGS.errors.generic);
+  }
+
+  function _esc(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+</script>
+</body>
+</html>
